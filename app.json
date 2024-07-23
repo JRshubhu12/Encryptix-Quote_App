@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "cc0c2e30-99b4-4468-bca8-bf19cfa047d4"
+      }
+    },
+    "android": {
+      "package": "com.shubham1_2.quoteapp"
+    }
+  }
+}

@@ -1,24 +1,29 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Login from './components/Login';
+import Register from './components/Register';
+import Dashboard from './components/Dashboard';
+import QuoteWithImage from './components/QuoteWithImage';
+import SavedQuotes from './components/SavedQuotes';
 import './App.css';
 
 function App() {
+  const [username, setUsername] = useState('');
+
+  const handleLogin = (username) => {
+    setUsername(username);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login handleLogin={handleLogin} />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard username={username} />} />
+        <Route path="/quotes" element={<QuoteWithImage />} />
+        <Route path="/saved-quotes" element={<SavedQuotes />} />
+      </Routes>
+    </Router>
   );
 }
 
