@@ -6,7 +6,8 @@ import type { TranslateTextInput, TranslateTextOutput } from '@/ai/flows/transla
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2 } from 'lucide-react';
+import { saveQuote as saveQuoteToLocalStorage, unsaveQuote as unsaveQuoteFromLocalStorage, isQuoteSaved } from '@/lib/local-storage';
+import { Bookmark, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2 } from 'lucide-react'; // Removed Heart
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
@@ -35,6 +36,16 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     setIsFlippedInternal(quote.isFlipped);
   }, [quote.isFlipped]);
 
+  // Sync isSaved state with local storage on mount
+  useEffect(() => {
+    const saved = isQuoteSaved(quote.id);
+    if (quote.isSaved !== saved) {
+      onUpdateQuote({ ...quote, isSaved: saved });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quote.id]); // Only run on ID change (effectively mount for this card instance)
+
+
   const toggleFlip = () => {
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
@@ -51,12 +62,10 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
 
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
-      // If the same text is requested again, allow it to restart
       if (currentSpokenText === textToSpeak) {
         setIsSpeaking(false);
         setCurrentSpokenText(undefined);
-      } else {
-        // If different text, just cancel and proceed to speak new text
+        return; // If same text was speaking, stop it and return
       }
     }
 
@@ -99,7 +108,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       }
 
       onUpdateQuote({ ...quote, joke: newJoke, displayJoke: newDisplayJoke, isFlipped: true });
-      setIsFlippedInternal(true);
+      setIsFlippedInternal(true); // Ensure card flips to joke side
       toast({
         title: 'Joke Generated!',
         description: 'A fresh joke has been crafted for you.',
@@ -168,24 +177,17 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     }
   };
 
-  const handleLike = () => {
-    const newLikes = quote.isLikedByCurrentUser ? quote.likes -1 : quote.likes + 1;
-    const newIsLiked = !quote.isLikedByCurrentUser;
-    onUpdateQuote({ ...quote, likes: newLikes, isLikedByCurrentUser: newIsLiked });
-    if (newIsLiked) {
-        toast({
-        title: 'Liked!',
-        description: `You liked "${quote.quote.substring(0, 20)}..."`,
-        });
-    }
-  };
-
   const handleSave = () => {
     const newSavedState = !quote.isSaved;
+    if (newSavedState) {
+      saveQuoteToLocalStorage({ ...quote, isSaved: true });
+    } else {
+      unsaveQuoteFromLocalStorage(quote.id);
+    }
     onUpdateQuote({ ...quote, isSaved: newSavedState });
     toast({
       title: newSavedState ? 'Quote Saved!' : 'Quote Unsaved',
-      description: `"${quote.quote.substring(0,20)}..." ${newSavedState ? 'added to' : 'removed from'} your favorites.`,
+      description: `"${quote.quote.substring(0,20)}..." ${newSavedState ? 'added to' : 'removed from'} your saved items.`,
     });
   };
 
@@ -199,7 +201,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
   };
 
   const textToShare = `Quote: "${quote.displayQuote}" - ${quote.author}${quote.displayJoke ? `\n\nJoke: ${quote.displayJoke}` : ''}`;
-  const pageUrl = typeof window !== "undefined" ? window.location.href : 'https://quotecraft.example.com'; 
+  const pageUrl = typeof window !== "undefined" ? window.location.origin : 'https://quotecraft.example.com'; 
 
   const shareOnTwitter = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(pageUrl)}`;
@@ -249,7 +251,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       <div
         className={cn(
           'relative transition-transform duration-700 ease-in-out w-full preserve-3d',
-          'h-[220px] md:h-[250px]',
+          'h-[220px] md:h-[250px]', // Adjusted height
           isFlippedInternal ? 'my-rotate-y-180' : ''
         )}
       >
@@ -283,7 +285,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
             ) : quote.displayJoke ? (
               <div>
                 <p className="text-foreground/90">{quote.displayJoke}</p>
-                <div className="flex justify-end mt-2">
+                 <div className="flex justify-end mt-2">
                     <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayJoke, quote.isTranslatedToHindi ? 'hi-IN' : 'en-US')} disabled={isSpeaking && currentSpokenText === quote.displayJoke} aria-label="Listen to joke" className="h-7 w-7 hover:bg-accent/10">
                         <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && currentSpokenText === quote.displayJoke) ? "text-primary" : "hover:text-primary")} />
                     </Button>
@@ -301,11 +303,8 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
 
       {/* Actions Footer - always visible */}
       <CardFooter className="p-3 flex justify-between items-center border-t bg-card rounded-b-lg shadow-sm border">
-        <div className="flex items-center space-x-0.5">
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleLike(); }} aria-label="Like" className="hover:bg-accent/10 rounded-full">
-            <Heart className={cn('w-5 h-5', quote.isLikedByCurrentUser ? 'text-destructive fill-destructive' : 'text-muted-foreground hover:text-destructive/80')} />
-          </Button>
-          <span className="text-sm text-muted-foreground tabular-nums min-w-[2ch] text-left">{quote.likes}</span>
+        <div className="flex items-center space-x-1"> {/* Adjusted spacing for fewer icons */}
+          {/* Removed Like Button and Count */}
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSave(); }} aria-label="Save" className="hover:bg-accent/10 rounded-full">
             <Bookmark className={cn('w-5 h-5', quote.isSaved ? 'text-accent fill-accent' : 'text-muted-foreground hover:text-accent/80')} />
           </Button>
@@ -365,4 +364,3 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     </Card>
   );
 }
-

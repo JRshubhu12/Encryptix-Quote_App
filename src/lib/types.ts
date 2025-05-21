@@ -4,15 +4,13 @@ export interface QuoteItem {
   quote: string; // This will now store the original quote
   author: string;
   joke?: string; // This will now store the original joke
-  likes: number;
+  // Removed: likes: number;
   isSaved: boolean;
   isFlipped: boolean;
-  isLikedByCurrentUser?: boolean; // Keep this if it's used
+  // Removed: isLikedByCurrentUser?: boolean;
 
   // New fields for translation
   displayQuote: string; // Text to actually display for the quote
   displayJoke?: string; // Text to actually display for the joke
   isTranslatedToHindi: boolean; // Flag to indicate if current display is Hindi
-
-  // Removed: imageUrl?: string;
 }

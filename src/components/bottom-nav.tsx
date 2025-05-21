@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Home, Heart, Share2, Settings } from 'lucide-react';
+import { Home, Bookmark, Share2, Settings } from 'lucide-react'; // Changed Heart to Bookmark
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -11,11 +11,6 @@ import { usePathname } from 'next/navigation';
 export default function BottomNav() {
   const { toast } = useToast();
   const pathname = usePathname();
-
-  // Placeholder actions
-  const handleLikesClick = () => {
-    toast({ title: 'Likes', description: 'This feature is coming soon!' });
-  };
 
   const handleShareClick = () => {
     if (navigator.share) {
@@ -53,10 +48,12 @@ export default function BottomNav() {
             <span className="text-xs mt-1">Home</span>
           </Button>
         </Link>
-        <Button variant="ghost" onClick={handleLikesClick} className={navItemClasses(false)}>
-          <Heart className="w-6 h-6" />
-          <span className="text-xs mt-1">Likes</span>
-        </Button>
+        <Link href="/saved" passHref legacyBehavior>
+          <Button variant="ghost" className={navItemClasses(pathname === '/saved')}>
+            <Bookmark className="w-6 h-6" />
+            <span className="text-xs mt-1">Saved</span>
+          </Button>
+        </Link>
         <Button variant="ghost" onClick={handleShareClick} className={navItemClasses(false)}>
           <Share2 className="w-6 h-6" />
           <span className="text-xs mt-1">Share</span>

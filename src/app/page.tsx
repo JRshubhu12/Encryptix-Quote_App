@@ -4,12 +4,12 @@
 import { generateJoke as aiGenerateJoke } from '@/ai/flows/generate-joke';
 import { translateText as aiTranslateText } from '@/ai/flows/translate-text-flow';
 import QuoteCard from '@/components/quote-card';
-// Removed: import BottomNav from '@/components/bottom-nav'; 
 import type { QuoteItem } from '@/lib/types';
+import { getSavedQuotes, isQuoteSaved } from '@/lib/local-storage';
 import { MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipped' | 'isLikedByCurrentUser' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi'>[] = [
+const initialQuotesData: Omit<QuoteItem, 'joke' | 'isSaved' | 'isFlipped' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi'>[] = [
   { id: '1', quote: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
   { id: '2', quote: "Strive not to be a success, but rather to be of value.", author: "Albert Einstein" },
   { id: '3', quote: "The mind is everything. What you think you become.", author: "Buddha" },
@@ -38,19 +38,20 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    setQuotes(
-      initialQuotesData.map(q => ({
-        ...q,
-        joke: undefined,
-        likes: Math.floor(Math.random() * 100),
-        isSaved: Math.random() > 0.7,
-        isFlipped: false,
-        isLikedByCurrentUser: Math.random() > 0.5,
-        displayQuote: q.quote,
-        displayJoke: undefined,
-        isTranslatedToHindi: false,
-      }))
-    );
+    // Ensure local storage is only accessed on the client
+    if (typeof window !== 'undefined') {
+      setQuotes(
+        initialQuotesData.map(q => ({
+          ...q,
+          joke: undefined,
+          isSaved: isQuoteSaved(q.id), // Initialize from local storage
+          isFlipped: false,
+          displayQuote: q.quote,
+          displayJoke: undefined,
+          isTranslatedToHindi: false,
+        }))
+      );
+    }
   }, []);
 
   const handleUpdateQuote = (updatedQuote: QuoteItem) => {
@@ -75,11 +76,11 @@ export default function HomePage() {
           <MessageSquareQuote data-ai-hint="logo quote" className="w-10 h-10 sm:w-12 sm:h-12 mr-3 text-accent" />
           QuoteCraft
         </h1>
-        <p className="text-muted-foreground mt-2 text-md sm:text-lg">Inspiration, humor, and visuals, one flip at a time.</p>
+        <p className="text-muted-foreground mt-2 text-md sm:text-lg">Inspiration and humor, one flip at a time.</p>
       </header>
 
       <main className="w-full max-w-6xl">
-        {quotes.length === 0 ? (
+        {quotes.length === 0 && isClient ? ( // Show only if client and still no quotes (e.g. initialQuotesData was empty)
           <div className="text-center py-10">
             <p className="text-xl text-muted-foreground">No quotes to display right now.</p>
             <p className="text-sm text-muted-foreground mt-2">Maybe try refreshing or check back later!</p>
@@ -106,6 +107,5 @@ export default function HomePage() {
         </p>
       </footer>
     </div>
-    // Removed <BottomNav /> as it's now part of RootLayout
   );
 }

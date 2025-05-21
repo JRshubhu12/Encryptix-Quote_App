@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Heart, Share2, Settings, PanelLeft } from 'lucide-react';
+import { Home, Bookmark, Share2, Settings, PanelLeft } from 'lucide-react'; // Changed Heart to Bookmark
 import {
   Sidebar,
   SidebarHeader,
@@ -22,10 +22,6 @@ import { usePathname } from 'next/navigation';
 export default function DesktopSidebar() {
   const { toast } = useToast();
   const pathname = usePathname();
-
-  const handleLikesClick = () => {
-    toast({ title: 'Likes', description: 'This feature is coming soon!' });
-  };
 
   const handleShareClick = () => {
     if (navigator.share) {
@@ -51,7 +47,6 @@ export default function DesktopSidebar() {
   return (
     <Sidebar side="left" variant="sidebar" collapsible="icon" className="hidden md:flex border-r bg-sidebar text-sidebar-foreground">
       <SidebarHeader className="p-2 flex justify-center items-center group-data-[state=expanded]:justify-between">
-        {/* Optional: Add a logo or title here when expanded */}
         <h2 className="text-lg font-semibold group-data-[state=expanded]:opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-200 ml-2">QuoteCraft</h2>
         <SidebarTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
@@ -72,10 +67,14 @@ export default function DesktopSidebar() {
             </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLikesClick} tooltip={{content: "Likes", side: "right", align: "center"}} className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-              <Heart />
-              <span>Likes</span>
-            </SidebarMenuButton>
+            <Link href="/saved" passHref legacyBehavior>
+              <SidebarMenuButton asChild isActive={pathname === '/saved'} tooltip={{content: "Saved", side: "right", align: "center"}} className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground">
+                <a>
+                  <Bookmark /> 
+                  <span>Saved</span>
+                </a>
+              </SidebarMenuButton>
+            </Link>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleShareClick} tooltip={{content: "Share App", side: "right", align: "center"}} className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
