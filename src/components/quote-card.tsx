@@ -2,11 +2,12 @@
 'use client';
 
 import type { GenerateJokeInput, GenerateJokeOutput } from '@/ai/flows/generate-joke';
+import type { TranslateTextInput, TranslateTextOutput } from '@/ai/flows/translate-text-flow';
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare } from 'lucide-react';
-import { useState } from 'react';
+import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -15,12 +16,19 @@ interface QuoteCardProps {
   quote: QuoteItem;
   onUpdateQuote: (updatedQuote: QuoteItem) => void;
   generateJokeAction: (input: GenerateJokeInput) => Promise<GenerateJokeOutput>;
+  translateTextAction: (input: TranslateTextInput) => Promise<TranslateTextOutput>;
 }
 
-export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: QuoteCardProps) {
+export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, translateTextAction }: QuoteCardProps) {
   const [isFlippedInternal, setIsFlippedInternal] = useState(quote.isFlipped);
   const [isLoadingJoke, setIsLoadingJoke] = useState(false);
+  const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
   const { toast } = useToast();
+
+  // Sync internal flipped state if prop changes (e.g. parent resets it)
+  useEffect(() => {
+    setIsFlippedInternal(quote.isFlipped);
+  }, [quote.isFlipped]);
 
   const toggleFlip = () => {
     const newFlippedState = !isFlippedInternal;
@@ -31,10 +39,18 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
   const handleGenerateJoke = async () => {
     setIsLoadingJoke(true);
     try {
-      const result = await generateJokeAction({ quote: quote.quote });
+      const result = await generateJokeAction({ quote: quote.quote }); // Use original quote for joke generation
       const newJoke = result.joke;
-      onUpdateQuote({ ...quote, joke: newJoke, isFlipped: true });
-      setIsFlippedInternal(true);
+      
+      // If currently translated, translate the new joke as well
+      let newDisplayJoke = newJoke;
+      if (quote.isTranslatedToHindi) {
+        const translationResult = await translateTextAction({ text: newJoke, targetLanguage: 'Hindi' });
+        newDisplayJoke = translationResult.translatedText;
+      }
+
+      onUpdateQuote({ ...quote, joke: newJoke, displayJoke: newDisplayJoke, isFlipped: true });
+      setIsFlippedInternal(true); // Ensure card flips to joke side
       toast({
         title: 'Joke Generated!',
         description: 'A fresh joke has been crafted for you.',
@@ -46,16 +62,64 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
         title: 'Error Generating Joke',
         description: 'Could not generate a new joke at this time. Please try again.',
       });
-      onUpdateQuote({ ...quote, joke: "Oops! My joke circuits are a bit fuzzy right now." });
+      onUpdateQuote({ ...quote, joke: "Oops! My joke circuits are a bit fuzzy right now.", displayJoke: "Oops! My joke circuits are a bit fuzzy right now." });
     } finally {
       setIsLoadingJoke(false);
     }
   };
 
+  const handleTranslate = async () => {
+    if (quote.isTranslatedToHindi) {
+      // If already translated, revert to original
+      onUpdateQuote({
+        ...quote,
+        displayQuote: quote.quote,
+        displayJoke: quote.joke,
+        isTranslatedToHindi: false,
+      });
+      toast({
+        title: 'Switched to Original',
+        description: 'Showing the original English text.',
+      });
+      return;
+    }
+
+    setIsLoadingTranslation(true);
+    try {
+      const translatedQuoteText = await translateTextAction({ text: quote.quote, targetLanguage: 'Hindi' });
+      let translatedJokeText: string | undefined = undefined;
+      if (quote.joke) {
+        const jokeTranslationResult = await translateTextAction({ text: quote.joke, targetLanguage: 'Hindi' });
+        translatedJokeText = jokeTranslationResult.translatedText;
+      }
+      
+      onUpdateQuote({
+        ...quote,
+        displayQuote: translatedQuoteText.translatedText,
+        displayJoke: translatedJokeText,
+        isTranslatedToHindi: true,
+      });
+      toast({
+        title: 'Translated to Hindi!',
+        description: 'The content has been translated.',
+      });
+    } catch (error) {
+      console.error('Failed to translate:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Translation Error',
+        description: 'Could not translate the content at this time. Please try again.',
+      });
+    } finally {
+      setIsLoadingTranslation(false);
+    }
+  };
+
+
   const handleLike = () => {
     const newLikes = quote.isLikedByCurrentUser ? quote.likes -1 : quote.likes + 1;
     const newIsLiked = !quote.isLikedByCurrentUser;
-    onUpdateQuote({ ...quote, likes: newLikes, isLikedByCurrentUser: newIsLiked } as any);
+    onUpdateQuote({ ...quote, likes: newLikes, isLikedByCurrentUser: newIsLiked });
     if (newIsLiked) {
         toast({
         title: 'Liked!',
@@ -82,8 +146,8 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
       });
   };
 
-  const textToShare = `Quote: "${quote.quote}" - ${quote.author}${quote.joke ? `\n\nJoke: ${quote.joke}` : ''}`;
-  const pageUrl = typeof window !== "undefined" ? window.location.href : 'https://quotecraft.example.com'; // Replace with your actual app URL
+  const textToShare = `Quote: "${quote.displayQuote}" - ${quote.author}${quote.displayJoke ? `\n\nJoke: ${quote.displayJoke}` : ''}`;
+  const pageUrl = typeof window !== "undefined" ? window.location.href : 'https://quotecraft.example.com'; 
 
   const shareOnTwitter = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(pageUrl)}`;
@@ -110,16 +174,14 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
         });
       } catch (error) {
         console.error('Error using native share:', error);
-        // Fallback to clipboard if native share fails or is cancelled by user
         copyToClipboard(textToShare);
         toast({
-          variant: 'default', // Changed from destructive as it's a fallback
+          variant: 'default', 
           title: 'Copied to Clipboard',
           description: 'Native share failed or was cancelled. Content copied instead.',
         });
       }
     } else {
-      // Should not happen if button is only rendered when navigator.share is true, but as a safe fallback
       copyToClipboard(textToShare);
       toast({ title: 'Copied to Clipboard!', description: 'Native share not available. Content copied instead.' });
     }
@@ -138,7 +200,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
         <div className="absolute w-full h-full bg-card rounded-t-lg p-6 flex flex-col justify-between backface-hidden border shadow-sm">
           <div className="overflow-y-auto h-full flex flex-col justify-center">
             <blockquote className="text-xl md:text-2xl italic font-serif text-foreground/90">
-              "{quote.quote}"
+              "{quote.displayQuote}"
             </blockquote>
             <p className="text-right text-sm text-muted-foreground mt-3">- {quote.author}</p>
           </div>
@@ -151,13 +213,13 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
         <div className="absolute w-full h-full bg-card rounded-t-lg p-6 flex flex-col justify-between my-rotate-y-180 backface-hidden border shadow-sm">
           <div className="overflow-y-auto h-full flex flex-col justify-center">
             <h3 className="text-lg font-semibold text-primary mb-2">Joke Time!</h3>
-            {isLoadingJoke ? (
+            {isLoadingJoke || (isLoadingTranslation && quote.joke) ? ( // Show loading if translating and joke exists
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-                <span>Crafting a joke...</span>
+                <span>{isLoadingJoke ? 'Crafting a joke...' : 'Translating joke...'}</span>
               </div>
-            ) : quote.joke ? (
-              <p className="text-foreground/90">{quote.joke}</p>
+            ) : quote.displayJoke ? (
+              <p className="text-foreground/90">{quote.displayJoke}</p>
             ) : (
               <p className="text-sm text-muted-foreground">No joke here yet! Generate one or tap to flip.</p>
             )}
@@ -172,7 +234,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
       <CardFooter className="p-3 flex justify-between items-center border-t bg-card rounded-b-lg shadow-sm border">
         <div className="flex items-center space-x-0.5">
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleLike(); }} aria-label="Like" className="hover:bg-accent/10 rounded-full">
-            <Heart className={cn('w-5 h-5', (quote as any).isLikedByCurrentUser ? 'text-destructive fill-destructive' : 'text-muted-foreground hover:text-destructive/80')} />
+            <Heart className={cn('w-5 h-5', quote.isLikedByCurrentUser ? 'text-destructive fill-destructive' : 'text-muted-foreground hover:text-destructive/80')} />
           </Button>
           <span className="text-sm text-muted-foreground tabular-nums min-w-[2ch] text-left">{quote.likes}</span>
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSave(); }} aria-label="Save" className="hover:bg-accent/10 rounded-full">
@@ -207,20 +269,30 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
               </div>
             </PopoverContent>
           </Popover>
-
         </div>
-        <Button 
-          onClick={(e) => { e.stopPropagation(); handleGenerateJoke(); }} 
-          disabled={isLoadingJoke} 
-          size="sm" 
-          className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm rounded-md"
-        >
-          <Lightbulb className="w-4 h-4 mr-2" />
-          {isLoadingJoke ? "Thinking..." : quote.joke ? "New Joke" : "Get Joke"}
-        </Button>
+
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={(e) => { e.stopPropagation(); handleTranslate(); }}
+            disabled={isLoadingTranslation}
+            size="sm"
+            variant="outline"
+            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary shadow-sm rounded-md"
+          >
+            {isLoadingTranslation ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Languages className="w-4 h-4 mr-2" />}
+            {isLoadingTranslation ? "Translating..." : quote.isTranslatedToHindi ? "Show Original" : "To Hindi"}
+          </Button>
+          <Button 
+            onClick={(e) => { e.stopPropagation(); handleGenerateJoke(); }} 
+            disabled={isLoadingJoke || isLoadingTranslation} 
+            size="sm" 
+            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm rounded-md"
+          >
+            {quote.isFlipped && quote.joke ? <Sparkles className="w-4 h-4 mr-2" /> : <Lightbulb className="w-4 h-4 mr-2" />}
+            {isLoadingJoke ? "Thinking..." : quote.joke ? "New Joke" : "Get Joke"}
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
 }
-
-    

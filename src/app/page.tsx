@@ -5,8 +5,9 @@ import QuoteCard from '@/components/quote-card';
 import type { QuoteItem } from '@/lib/types';
 import { MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { translateText as aiTranslateText } from '@/ai/flows/translate-text-flow';
 
-const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipped'>[] = [
+const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipped' | 'isLikedByCurrentUser' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi'>[] = [
   { id: '1', quote: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
   { id: '2', quote: "Strive not to be a success, but rather to be of value.", author: "Albert Einstein" },
   { id: '3', quote: "The mind is everything. What you think you become.", author: "Buddha" },
@@ -22,14 +23,18 @@ export default function HomePage() {
   useEffect(() => {
     setIsClient(true);
     // Initialize quotes with random like/save states for demo purposes
+    // and setup for translation
     setQuotes(
       initialQuotesData.map(q => ({
         ...q,
-        joke: undefined,
+        joke: undefined, // Original joke
         likes: Math.floor(Math.random() * 100),
         isSaved: Math.random() > 0.7,
         isFlipped: false,
-        isLikedByCurrentUser: Math.random() > 0.5 // Demo field
+        isLikedByCurrentUser: Math.random() > 0.5, // Demo field
+        displayQuote: q.quote, // Initially display original quote
+        displayJoke: undefined, // Initially no display joke
+        isTranslatedToHindi: false, // Initially not translated
       }))
     );
   }, []);
@@ -75,6 +80,7 @@ export default function HomePage() {
                   quote={quote}
                   onUpdateQuote={handleUpdateQuote}
                   generateJokeAction={aiGenerateJoke}
+                  translateTextAction={aiTranslateText}
                 />
               </div>
             ))}
