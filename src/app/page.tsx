@@ -15,7 +15,22 @@ const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipp
   { id: '3', quote: "The mind is everything. What you think you become.", author: "Buddha" },
   { id: '4', quote: "Your time is limited, so don’t waste it living someone else’s life.", author: "Steve Jobs"},
   { id: '5', quote: "The best way to predict the future is to create it.", author: "Peter Drucker" },
-  { id: '6', quote: "Life is what happens when you're busy making other plans.", author: "John Lennon" }
+  { id: '6', quote: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
+  // Added new quotes for diversity
+  { id: '7', quote: "Happiness is not something ready made. It comes from your own actions.", author: "Dalai Lama" },
+  { id: '8', quote: "The only joy in the world is to begin.", author: "Cesare Pavese" },
+  { id: '9', quote: "Look deep into nature, and then you will understand everything better.", author: "Albert Einstein" },
+  { id: '10', quote: "The clearest way into the Universe is through a forest wilderness.", author: "John Muir" },
+  { id: '11', quote: "Tears are words that need to be written.", author: "Paulo Coelho" }, // Evokes sadness
+  { id: '12', quote: "Sadness flies away on the wings of time.", author: "Jean de La Fontaine" },
+  { id: '13', quote: "In the rainforest, life thrives in abundance.", author: "Unknown" }, // Specific theme
+  { id: '14', quote: "Every sunset brings the promise of a new dawn.", author: "Ralph Waldo Emerson" }, // Evokes hope, visuals
+  { id: '15', quote: "Technology is best when it brings people together.", author: "Matt Mullenweg" },
+  { id: '16', quote: "Art enables us to find ourselves and lose ourselves at the same time.", author: "Thomas Merton" },
+  { id: '17', quote: "The ocean stirs the heart, inspires the imagination and brings eternal joy to the soul.", author: "Wyland" },
+  { id: '18', quote: "Music is the strongest form of magic.", author: "Marilyn Manson" },
+  { id: '19', quote: "A walk in nature walks the soul back home.", author: "Mary Davis" },
+  { id: '20', quote: "Winter is not a season, it's a celebration.", author: "Anamika Mishra" },
 ];
 
 export default function HomePage() {
