@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Home, Bookmark, Share2, Settings } from 'lucide-react'; // Changed Heart to Bookmark
+import { Home, Bookmark, Share2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -13,16 +13,27 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   const handleShareClick = () => {
+    const appUrl = typeof window !== "undefined" ? window.location.origin : 'https://quotecraft.example.com';
+    const portfolioUrl = 'https://shubhamcoder.netlify.app/';
+    
+    const shareData = {
+      title: `QuoteCraft by Shubham - Inspiration & Humor`,
+      text: `Explore QuoteCraft for inspiring quotes and fun jokes!\nDeveloped by Shubham: ${portfolioUrl}`,
+      url: appUrl,
+    };
+
     if (navigator.share) {
-      navigator.share({
-        title: 'QuoteCraft App',
-        text: 'Check out QuoteCraft for daily inspiration and humor!',
-        url: typeof window !== "undefined" ? window.location.origin : 'https://quotecraft.example.com',
-      })
+      navigator.share(shareData)
       .then(() => console.log('Successful share'))
       .catch((error) => {
         console.log('Error sharing', error);
-        toast({ variant: 'destructive', title: 'Share Failed', description: 'Could not share at this time.' });
+        // Check if the error is an AbortError (user cancelled share)
+        if (error.name === 'AbortError') {
+          console.log('Share cancelled by user.');
+          // Optionally, don't show a toast if the user cancelled
+        } else {
+          toast({ variant: 'destructive', title: 'Share Failed', description: 'Could not share at this time.' });
+        }
       });
     } else {
         toast({ title: 'Share App', description: 'Share functionality not available on this browser. You can copy the URL.' });
