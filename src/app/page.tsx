@@ -1,3 +1,4 @@
+
 'use client';
 
 import { generateJoke as aiGenerateJoke } from '@/ai/flows/generate-joke';
@@ -88,6 +89,9 @@ export default function HomePage() {
       </main>
       <footer className="py-12 mt-auto text-center text-muted-foreground text-sm">
         <p>&copy; {new Date().getFullYear()} QuoteCraft. All rights reserved.</p>
+        <p>
+          Developed by <a href="https://shubhamcoder.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Shubham</a>.
+        </p>
       </footer>
     </div>
   );
