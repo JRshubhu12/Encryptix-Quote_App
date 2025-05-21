@@ -9,7 +9,7 @@ import { getSavedQuotes, isQuoteSaved } from '@/lib/local-storage';
 import { MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-const initialQuotesData: Omit<QuoteItem, 'joke' | 'isSaved' | 'isFlipped' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi'>[] = [
+const initialQuotesData: Omit<QuoteItem, 'joke' | 'isSaved' | 'isFlipped' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi' | 'isLiked' | 'likes'>[] = [
   { id: '1', quote: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
   { id: '2', quote: "Strive not to be a success, but rather to be of value.", author: "Albert Einstein" },
   { id: '3', quote: "The mind is everything. What you think you become.", author: "Buddha" },
@@ -40,8 +40,11 @@ export default function HomePage() {
     setIsClient(true);
     // Ensure local storage is only accessed on the client
     if (typeof window !== 'undefined') {
+      // Shuffle initialQuotesData to show new quotes on refresh
+      const shuffledQuotes = [...initialQuotesData].sort(() => Math.random() - 0.5);
+      
       setQuotes(
-        initialQuotesData.map(q => ({
+        shuffledQuotes.map(q => ({
           ...q,
           joke: undefined,
           isSaved: isQuoteSaved(q.id), // Initialize from local storage
@@ -49,6 +52,8 @@ export default function HomePage() {
           displayQuote: q.quote,
           displayJoke: undefined,
           isTranslatedToHindi: false,
+          isLiked: false, // Initialize isLiked state
+          likes: Math.floor(Math.random() * 100), // Initialize with a random number of likes
         }))
       );
     }

@@ -7,7 +7,7 @@ import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { saveQuote as saveQuoteToLocalStorage, unsaveQuote as unsaveQuoteFromLocalStorage, isQuoteSaved } from '@/lib/local-storage';
-import { Bookmark, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2 } from 'lucide-react'; // Removed Heart
+import { Bookmark, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2, Heart } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
@@ -191,6 +191,17 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     });
   };
 
+  const handleLike = () => {
+    const newLikedState = !quote.isLiked;
+    const newLikesCount = newLikedState ? quote.likes + 1 : quote.likes - 1;
+    onUpdateQuote({ ...quote, isLiked: newLikedState, likes: newLikesCount });
+    // Optionally, provide a toast notification for like/unlike
+    // toast({
+    //   title: newLikedState ? 'Liked!' : 'Unliked',
+    // });
+  };
+
+
   const copyToClipboard = (text: string) => {
      navigator.clipboard.writeText(text)
       .then(() => toast({ title: 'Copied to Clipboard!', description: 'Quote details are ready to paste.' }))
@@ -303,12 +314,16 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
 
       {/* Actions Footer - always visible */}
       <CardFooter className="p-3 flex justify-between items-center border-t bg-card rounded-b-lg shadow-sm border">
-        <div className="flex items-center space-x-1"> {/* Adjusted spacing for fewer icons */}
-          {/* Removed Like Button and Count */}
+        <div className="flex items-center space-x-1">
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSave(); }} aria-label="Save" className="hover:bg-accent/10 rounded-full">
             <Bookmark className={cn('w-5 h-5', quote.isSaved ? 'text-accent fill-accent' : 'text-muted-foreground hover:text-accent/80')} />
           </Button>
-          
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleLike(); }} aria-label="Like" className="hover:bg-red-500/10 rounded-full">
+              <Heart className={cn('w-5 h-5', quote.isLiked ? 'text-red-500 fill-red-500' : 'text-muted-foreground hover:text-red-500/80')} />
+            </Button>
+            <span className="text-xs text-muted-foreground ml-0.5 tabular-nums">{quote.likes}</span>
+          </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Share" className="hover:bg-accent/10 rounded-full" onClick={(e) => e.stopPropagation()}>
