@@ -273,7 +273,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
               "{quote.displayQuote}"
             </blockquote>
             <div className="flex justify-between items-center mt-2">
-                <p className="text-right text-xs text-muted-foreground">- {quote.author}</p>
+                <p className="text-right text-sm text-foreground/80">- {quote.author}</p>
                 <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayQuote, quote.isTranslatedToHindi ? 'hi-IN' : 'en-US')} disabled={isSpeaking && currentSpokenText === quote.displayQuote} aria-label="Listen to quote" className="h-7 w-7 hover:bg-accent/10">
                     <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && currentSpokenText === quote.displayQuote) ? "text-primary" : "hover:text-primary")} />
                 </Button>
@@ -379,3 +379,4 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     </Card>
   );
 }
+
