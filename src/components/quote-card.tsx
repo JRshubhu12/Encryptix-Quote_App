@@ -6,14 +6,11 @@ import type { TranslateTextInput, TranslateTextOutput } from '@/ai/flows/transla
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-// Removed: import { fetchImageFromApiNinjas } from '@/lib/api-ninjas-images'; 
-import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2 } from 'lucide-react'; // Removed ImageIcon, AlertCircle
+import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-// Removed: import Image from 'next/image'; 
-// Removed: import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface QuoteCardProps {
@@ -27,9 +24,10 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
   const [isFlippedInternal, setIsFlippedInternal] = useState(quote.isFlipped);
   const [isLoadingJoke, setIsLoadingJoke] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
-  // Removed image related states: internalImageUrl, isFetchingImage, imageError
   
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentSpokenText, setCurrentSpokenText] = useState<string | undefined>(undefined);
+
 
   const { toast } = useToast();
 
@@ -37,39 +35,55 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     setIsFlippedInternal(quote.isFlipped);
   }, [quote.isFlipped]);
 
-  // Removed useEffect for loading image and getImageQuery callback
-
   const toggleFlip = () => {
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
       setIsSpeaking(false);
+      setCurrentSpokenText(undefined);
     }
     const newFlippedState = !isFlippedInternal;
     setIsFlippedInternal(newFlippedState);
     onUpdateQuote({ ...quote, isFlipped: newFlippedState });
   };
 
-  const handleSpeak = useCallback((textToSpeak?: string) => {
+  const handleSpeak = useCallback((textToSpeak?: string, lang?: string) => {
     if (!textToSpeak) return;
 
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
-      setIsSpeaking(false); 
+      // If the same text is requested again, allow it to restart
+      if (currentSpokenText === textToSpeak) {
+        setIsSpeaking(false);
+        setCurrentSpokenText(undefined);
+      } else {
+        // If different text, just cancel and proceed to speak new text
+      }
     }
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => {
+    if (lang) {
+      utterance.lang = lang;
+    }
+    utterance.onstart = () => {
+        setIsSpeaking(true);
+        setCurrentSpokenText(textToSpeak);
+    };
+    utterance.onend = () => {
+        setIsSpeaking(false);
+        setCurrentSpokenText(undefined);
+    };
+    utterance.onerror = (event) => {
       setIsSpeaking(false);
+      setCurrentSpokenText(undefined);
+      console.error('Speech synthesis error', event);
       toast({
         variant: 'destructive',
         title: 'Speech Error',
-        description: 'Could not play audio.',
+        description: `Could not play audio. Your browser may not support the selected language (${lang || 'default'}).`,
       });
     };
     speechSynthesis.speak(utterance);
-  }, [toast]);
+  }, [toast, currentSpokenText]);
 
 
   const handleGenerateJoke = async () => {
@@ -107,6 +121,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
       setIsSpeaking(false);
+      setCurrentSpokenText(undefined);
     }
     if (quote.isTranslatedToHindi) {
       onUpdateQuote({
@@ -234,21 +249,20 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       <div
         className={cn(
           'relative transition-transform duration-700 ease-in-out w-full preserve-3d',
-          'h-[220px] md:h-[250px]', // Adjusted height
+          'h-[220px] md:h-[250px]',
           isFlippedInternal ? 'my-rotate-y-180' : ''
         )}
       >
         {/* Front Face */}
         <div className="absolute w-full h-full bg-card rounded-t-lg p-4 flex flex-col justify-between backface-hidden border shadow-sm">
-          {/* Image section removed */}
-          <div className="overflow-y-auto flex-grow flex flex-col justify-center mb-2 pt-4"> {/* Added pt-4 for spacing */}
+          <div className="overflow-y-auto flex-grow flex flex-col justify-center mb-2 pt-4">
             <blockquote className="text-lg md:text-xl italic font-serif text-foreground/90">
               "{quote.displayQuote}"
             </blockquote>
             <div className="flex justify-between items-center mt-2">
                 <p className="text-right text-xs text-muted-foreground">- {quote.author}</p>
-                <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayQuote)} disabled={isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayQuote} aria-label="Listen to quote" className="h-7 w-7 hover:bg-accent/10">
-                    <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayQuote) ? "text-primary" : "hover:text-primary")} />
+                <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayQuote, quote.isTranslatedToHindi ? 'hi-IN' : 'en-US')} disabled={isSpeaking && currentSpokenText === quote.displayQuote} aria-label="Listen to quote" className="h-7 w-7 hover:bg-accent/10">
+                    <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && currentSpokenText === quote.displayQuote) ? "text-primary" : "hover:text-primary")} />
                 </Button>
             </div>
           </div>
@@ -270,8 +284,8 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
               <div>
                 <p className="text-foreground/90">{quote.displayJoke}</p>
                 <div className="flex justify-end mt-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayJoke)} disabled={isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayJoke} aria-label="Listen to joke" className="h-7 w-7 hover:bg-accent/10">
-                        <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayJoke) ? "text-primary" : "hover:text-primary")} />
+                    <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayJoke, quote.isTranslatedToHindi ? 'hi-IN' : 'en-US')} disabled={isSpeaking && currentSpokenText === quote.displayJoke} aria-label="Listen to joke" className="h-7 w-7 hover:bg-accent/10">
+                        <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && currentSpokenText === quote.displayJoke) ? "text-primary" : "hover:text-primary")} />
                     </Button>
                 </div>
               </div>
@@ -351,3 +365,4 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     </Card>
   );
 }
+
