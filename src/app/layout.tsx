@@ -8,6 +8,7 @@ import DesktopSidebar from '@/components/desktop-sidebar';
 import BottomNav from '@/components/bottom-nav';
 import { SidebarInset } from '@/components/ui/sidebar';
 import React from 'react'; // Import React for Fragment
+import Link from 'next/link'; // Import Link for the portfolio link
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -32,6 +33,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}>
+        <div className="text-center text-xs py-1 bg-primary/10 text-primary-foreground/80 shadow-sm">
+          Developed by <Link href="https://shubhamcoder.netlify.app" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline text-primary">Shubham</Link>
+        </div>
         <SidebarProvider defaultOpen={false}>
           <React.Fragment> {/* Wrapper to ensure SidebarProvider receives a single child element */}
             <div className="flex min-h-screen w-full">
