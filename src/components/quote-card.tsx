@@ -6,14 +6,14 @@ import type { TranslateTextInput, TranslateTextOutput } from '@/ai/flows/transla
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { fetchImageFromApiNinjas } from '@/lib/api-ninjas-images'; // Import API Ninjas fetcher
-import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+// Removed: import { fetchImageFromApiNinjas } from '@/lib/api-ninjas-images'; 
+import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2 } from 'lucide-react'; // Removed ImageIcon, AlertCircle
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import Image from 'next/image'; 
-import { Skeleton } from '@/components/ui/skeleton';
+// Removed: import Image from 'next/image'; 
+// Removed: import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface QuoteCardProps {
@@ -27,9 +27,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
   const [isFlippedInternal, setIsFlippedInternal] = useState(quote.isFlipped);
   const [isLoadingJoke, setIsLoadingJoke] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
-  const [internalImageUrl, setInternalImageUrl] = useState<string | undefined>(quote.imageUrl);
-  const [isFetchingImage, setIsFetchingImage] = useState(false);
-  const [imageError, setImageError] = useState<string | null>(null);
+  // Removed image related states: internalImageUrl, isFetchingImage, imageError
   
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -39,61 +37,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     setIsFlippedInternal(quote.isFlipped);
   }, [quote.isFlipped]);
 
-  useEffect(() => {
-    setInternalImageUrl(quote.imageUrl);
-  }, [quote.imageUrl]);
-
-  const getImageQuery = useCallback((text: string): string => {
-    // Simple query: first 3-5 words, or author if quote is very short.
-    const words = text.split(' ').filter(Boolean);
-    if (words.length >= 3) {
-      return words.slice(0, Math.min(words.length, 5)).join(' ');
-    }
-    if (quote.author) {
-        const authorWords = quote.author.split(' ');
-        return authorWords[authorWords.length -1]; // last name of author
-    }
-    return text || "inspiration"; // fallback
-  }, [quote.author]);
-
-
-  useEffect(() => {
-    const loadImage = async () => {
-      if (!internalImageUrl && !isFetchingImage && !imageError && quote.quote) {
-        setIsFetchingImage(true);
-        setImageError(null);
-        try {
-          const query = getImageQuery(quote.quote);
-          // Example category, could be dynamic or configurable
-          // For API Ninjas, 'nature', 'city', 'technology', 'food', 'still_life', 'abstract', 'wildlife' are examples
-          const categories = ['nature', 'abstract', 'technology', 'inspiration'];
-          const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-          
-          const imageUrl = await fetchImageFromApiNinjas(query, randomCategory);
-          if (imageUrl) {
-            setInternalImageUrl(imageUrl);
-            onUpdateQuote({ ...quote, imageUrl: imageUrl });
-          } else {
-            setImageError('No image found.');
-            const placeholderUrl = `https://placehold.co/320x180.png?text=${encodeURIComponent(query.substring(0,15))}`;
-            setInternalImageUrl(placeholderUrl);
-            onUpdateQuote({ ...quote, imageUrl: placeholderUrl });
-          }
-        } catch (error) {
-          console.error('Failed to fetch image from API Ninjas:', error);
-          setImageError('Could not load image.');
-           const placeholderUrl = `https://placehold.co/320x180.png?text=Error`;
-           setInternalImageUrl(placeholderUrl);
-           onUpdateQuote({ ...quote, imageUrl: placeholderUrl });
-        } finally {
-          setIsFetchingImage(false);
-        }
-      }
-    };
-    loadImage();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quote.id, quote.quote, internalImageUrl, isFetchingImage, onUpdateQuote, imageError, getImageQuery]);
-
+  // Removed useEffect for loading image and getImageQuery callback
 
   const toggleFlip = () => {
     if (speechSynthesis.speaking) {
@@ -290,40 +234,14 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       <div
         className={cn(
           'relative transition-transform duration-700 ease-in-out w-full preserve-3d',
-          'h-[380px] md:h-[420px]', 
+          'h-[220px] md:h-[250px]', // Adjusted height
           isFlippedInternal ? 'my-rotate-y-180' : ''
         )}
       >
         {/* Front Face */}
         <div className="absolute w-full h-full bg-card rounded-t-lg p-4 flex flex-col justify-between backface-hidden border shadow-sm">
-          <div className="mb-3 h-[160px] md:h-[180px] w-full rounded-md overflow-hidden bg-muted flex items-center justify-center relative">
-            {isFetchingImage ? (
-              <Skeleton className="h-full w-full" />
-            ) : internalImageUrl ? (
-              <Image 
-                src={internalImageUrl} 
-                alt={`Visual for: ${quote.quote.substring(0,30)}...`} 
-                width={320} 
-                height={180} 
-                className="object-cover w-full h-full" 
-                priority={false} 
-                data-ai-hint={getImageQuery(quote.quote)}
-                unoptimized={internalImageUrl.startsWith('https://placehold.co')}
-              />
-            ) : imageError ? (
-                <div className="flex flex-col items-center justify-center text-destructive">
-                    <AlertCircle className="w-8 h-8 mb-1" />
-                    <span className="text-xs text-center">{imageError}</span>
-                </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-muted-foreground">
-                 <ImageIcon className="w-8 h-8 mb-1 text-gray-400" />
-                 <span className="text-xs">Loading image...</span>
-              </div>
-            )}
-          </div>
-
-          <div className="overflow-y-auto flex-grow flex flex-col justify-center mb-2">
+          {/* Image section removed */}
+          <div className="overflow-y-auto flex-grow flex flex-col justify-center mb-2 pt-4"> {/* Added pt-4 for spacing */}
             <blockquote className="text-lg md:text-xl italic font-serif text-foreground/90">
               "{quote.displayQuote}"
             </blockquote>

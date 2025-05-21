@@ -1,3 +1,4 @@
+
 export interface QuoteItem {
   id: string;
   quote: string; // This will now store the original quote
@@ -13,6 +14,5 @@ export interface QuoteItem {
   displayJoke?: string; // Text to actually display for the joke
   isTranslatedToHindi: boolean; // Flag to indicate if current display is Hindi
 
-  // New field for AI-generated image
-  imageUrl?: string;
+  // Removed: imageUrl?: string;
 }

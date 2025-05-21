@@ -17,37 +17,37 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      // Domains for API Ninjas Image Search results (examples, may need more)
-      {
-        protocol: 'https',
-        hostname: 't*.ftcdn.net', // Matches t0.ftcdn.net, t1.ftcdn.net, etc.
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'c8.alamy.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.shutterstock.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'thumbs.dreamstime.com',
-        port: '',
-        pathname: '/**',
-      },
-       {
-        protocol: 'https',
-        hostname: 'api.api-ninjas.com', // If they ever proxy images
-        port: '',
-        pathname: '/**',
-      }
+      // Removed API Ninjas specific domains as image feature is removed
+      // {
+      //   protocol: 'https',
+      //   hostname: 't*.ftcdn.net', 
+      //   port: '',
+      //   pathname: '/**',
+      // },
+      // {
+      //   protocol: 'https',
+      //   hostname: 'c8.alamy.com',
+      //   port: '',
+      //   pathname: '/**',
+      // },
+      // {
+      //   protocol: 'https',
+      //   hostname: 'www.shutterstock.com',
+      //   port: '',
+      //   pathname: '/**',
+      // },
+      // {
+      //   protocol: 'https',
+      //   hostname: 'thumbs.dreamstime.com',
+      //   port: '',
+      //   pathname: '/**',
+      // },
+      //  {
+      //   protocol: 'https',
+      //   hostname: 'api.api-ninjas.com', 
+      //   port: '',
+      //   pathname: '/**',
+      // }
     ],
   },
 };

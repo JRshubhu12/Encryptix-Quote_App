@@ -8,7 +8,7 @@ import type { QuoteItem } from '@/lib/types';
 import { MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipped' | 'isLikedByCurrentUser' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi' | 'imageUrl'>[] = [
+const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipped' | 'isLikedByCurrentUser' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi'>[] = [ // Removed imageUrl from Omit
   { id: '1', quote: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
   { id: '2', quote: "Strive not to be a success, but rather to be of value.", author: "Albert Einstein" },
   { id: '3', quote: "The mind is everything. What you think you become.", author: "Buddha" },
@@ -37,10 +37,10 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Initialize API_NINJAS_API_KEY in environment for client-side access (prototype only)
-    if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_NINJAS_API_KEY && process.env.API_NINJAS_API_KEY) {
-      process.env.NEXT_PUBLIC_API_NINJAS_API_KEY = process.env.API_NINJAS_API_KEY;
-    }
+    // Removed API_NINJAS_API_KEY setup for client-side as it's no longer needed for card images
+    // if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_NINJAS_API_KEY && process.env.API_NINJAS_API_KEY) {
+    //   process.env.NEXT_PUBLIC_API_NINJAS_API_KEY = process.env.API_NINJAS_API_KEY;
+    // }
 
     setQuotes(
       initialQuotesData.map(q => ({
@@ -53,7 +53,7 @@ export default function HomePage() {
         displayQuote: q.quote,
         displayJoke: undefined,
         isTranslatedToHindi: false,
-        imageUrl: undefined, 
+        // Removed: imageUrl: undefined, 
       }))
     );
   }, []);
