@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 export default function BottomNav() {
   const { toast } = useToast();
+  const pathname = usePathname();
 
   // Placeholder actions
   const handleLikesClick = () => {
@@ -36,24 +38,30 @@ export default function BottomNav() {
     toast({ title: 'Settings', description: 'Settings page coming soon!' });
   };
 
+  const navItemClasses = (isActive: boolean) => 
+    cn(
+      "flex flex-col items-center justify-center h-auto p-2 text-muted-foreground hover:text-primary focus:text-primary",
+      isActive && "text-primary"
+    );
+
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
       <div className="flex justify-around items-center h-16">
         <Link href="/" passHref legacyBehavior>
-          <Button variant="ghost" className="flex flex-col items-center justify-center h-auto p-2 text-muted-foreground hover:text-primary focus:text-primary">
+          <Button variant="ghost" className={navItemClasses(pathname === '/')}>
             <Home className="w-6 h-6" />
             <span className="text-xs mt-1">Home</span>
           </Button>
         </Link>
-        <Button variant="ghost" onClick={handleLikesClick} className="flex flex-col items-center justify-center h-auto p-2 text-muted-foreground hover:text-primary focus:text-primary">
+        <Button variant="ghost" onClick={handleLikesClick} className={navItemClasses(false)}>
           <Heart className="w-6 h-6" />
           <span className="text-xs mt-1">Likes</span>
         </Button>
-        <Button variant="ghost" onClick={handleShareClick} className="flex flex-col items-center justify-center h-auto p-2 text-muted-foreground hover:text-primary focus:text-primary">
+        <Button variant="ghost" onClick={handleShareClick} className={navItemClasses(false)}>
           <Share2 className="w-6 h-6" />
           <span className="text-xs mt-1">Share</span>
         </Button>
-        <Button variant="ghost" onClick={handleSettingsClick} className="flex flex-col items-center justify-center h-auto p-2 text-muted-foreground hover:text-primary focus:text-primary">
+        <Button variant="ghost" onClick={handleSettingsClick} className={navItemClasses(false)}>
           <Settings className="w-6 h-6" />
           <span className="text-xs mt-1">Settings</span>
         </Button>

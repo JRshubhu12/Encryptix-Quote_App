@@ -4,7 +4,7 @@
 import { generateJoke as aiGenerateJoke } from '@/ai/flows/generate-joke';
 import { translateText as aiTranslateText } from '@/ai/flows/translate-text-flow';
 import QuoteCard from '@/components/quote-card';
-import BottomNav from '@/components/bottom-nav'; // Import BottomNav
+// Removed: import BottomNav from '@/components/bottom-nav'; 
 import type { QuoteItem } from '@/lib/types';
 import { MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -69,45 +69,43 @@ export default function HomePage() {
   }
 
   return (
-    <>
-      <div className="flex flex-col items-center min-h-screen bg-background p-4 md:p-8 pb-20 md:pb-8"> {/* Added pb-20 md:pb-8 */}
-        <header className="my-8 md:my-12 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-primary font-serif flex items-center justify-center">
-            <MessageSquareQuote data-ai-hint="logo quote" className="w-10 h-10 sm:w-12 sm:h-12 mr-3 text-accent" />
-            QuoteCraft
-          </h1>
-          <p className="text-muted-foreground mt-2 text-md sm:text-lg">Inspiration, humor, and visuals, one flip at a time.</p>
-        </header>
+    <div className="flex flex-col items-center w-full bg-background p-4 md:p-8 pb-20 md:pb-8">
+      <header className="my-8 md:my-12 text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold text-primary font-serif flex items-center justify-center">
+          <MessageSquareQuote data-ai-hint="logo quote" className="w-10 h-10 sm:w-12 sm:h-12 mr-3 text-accent" />
+          QuoteCraft
+        </h1>
+        <p className="text-muted-foreground mt-2 text-md sm:text-lg">Inspiration, humor, and visuals, one flip at a time.</p>
+      </header>
 
-        <main className="w-full max-w-6xl">
-          {quotes.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-xl text-muted-foreground">No quotes to display right now.</p>
-              <p className="text-sm text-muted-foreground mt-2">Maybe try refreshing or check back later!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {quotes.map(quote => (
-                <div key={quote.id} className="perspective">
-                  <QuoteCard
-                    quote={quote}
-                    onUpdateQuote={handleUpdateQuote}
-                    generateJokeAction={aiGenerateJoke}
-                    translateTextAction={aiTranslateText}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </main>
-        <footer className="py-12 mt-auto text-center text-muted-foreground text-sm">
-          <p>&copy; {new Date().getFullYear()} QuoteCraft. All rights reserved.</p>
-          <p>
-            Developed by <a href="https://shubhamcoder.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Shubham</a>.
-          </p>
-        </footer>
-      </div>
-      <BottomNav /> {/* Add BottomNav component here */}
-    </>
+      <main className="w-full max-w-6xl">
+        {quotes.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-xl text-muted-foreground">No quotes to display right now.</p>
+            <p className="text-sm text-muted-foreground mt-2">Maybe try refreshing or check back later!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {quotes.map(quote => (
+              <div key={quote.id} className="perspective">
+                <QuoteCard
+                  quote={quote}
+                  onUpdateQuote={handleUpdateQuote}
+                  generateJokeAction={aiGenerateJoke}
+                  translateTextAction={aiTranslateText}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+      <footer className="py-12 mt-auto text-center text-muted-foreground text-sm">
+        <p>&copy; {new Date().getFullYear()} QuoteCraft. All rights reserved.</p>
+        <p>
+          Developed by <a href="https://shubhamcoder.netlify.app" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Shubham</a>.
+        </p>
+      </footer>
+    </div>
+    // Removed <BottomNav /> as it's now part of RootLayout
   );
 }
