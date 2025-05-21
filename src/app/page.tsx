@@ -1,13 +1,14 @@
 'use client';
 
 import { generateJoke as aiGenerateJoke } from '@/ai/flows/generate-joke';
+import { translateText as aiTranslateText } from '@/ai/flows/translate-text-flow';
+import { generateImageForQuote as aiGenerateImage } from '@/ai/flows/generate-image-flow.ts'; // Import the new flow
 import QuoteCard from '@/components/quote-card';
 import type { QuoteItem } from '@/lib/types';
 import { MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { translateText as aiTranslateText } from '@/ai/flows/translate-text-flow';
 
-const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipped' | 'isLikedByCurrentUser' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi'>[] = [
+const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipped' | 'isLikedByCurrentUser' | 'displayQuote' | 'displayJoke' | 'isTranslatedToHindi' | 'imageUrl'>[] = [
   { id: '1', quote: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
   { id: '2', quote: "Strive not to be a success, but rather to be of value.", author: "Albert Einstein" },
   { id: '3', quote: "The mind is everything. What you think you become.", author: "Buddha" },
@@ -22,19 +23,18 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Initialize quotes with random like/save states for demo purposes
-    // and setup for translation
     setQuotes(
       initialQuotesData.map(q => ({
         ...q,
-        joke: undefined, // Original joke
+        joke: undefined,
         likes: Math.floor(Math.random() * 100),
         isSaved: Math.random() > 0.7,
         isFlipped: false,
-        isLikedByCurrentUser: Math.random() > 0.5, // Demo field
-        displayQuote: q.quote, // Initially display original quote
-        displayJoke: undefined, // Initially no display joke
-        isTranslatedToHindi: false, // Initially not translated
+        isLikedByCurrentUser: Math.random() > 0.5,
+        displayQuote: q.quote,
+        displayJoke: undefined,
+        isTranslatedToHindi: false,
+        imageUrl: undefined, // Initialize imageUrl
       }))
     );
   }, []);
@@ -46,8 +46,6 @@ export default function HomePage() {
   };
 
   if (!isClient) {
-    // Render nothing or a loading indicator on the server/first render
-    // to avoid hydration mismatches with random initial data
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 md:p-8">
             <MessageSquareQuote className="w-16 h-16 text-primary animate-pulse" />
@@ -63,7 +61,7 @@ export default function HomePage() {
           <MessageSquareQuote data-ai-hint="logo quote" className="w-10 h-10 sm:w-12 sm:h-12 mr-3 text-accent" />
           QuoteCraft
         </h1>
-        <p className="text-muted-foreground mt-2 text-md sm:text-lg">Inspiration and humor, one flip at a time.</p>
+        <p className="text-muted-foreground mt-2 text-md sm:text-lg">Inspiration, humor, and visuals, one flip at a time.</p>
       </header>
 
       <main className="w-full max-w-6xl">
@@ -81,6 +79,7 @@ export default function HomePage() {
                   onUpdateQuote={handleUpdateQuote}
                   generateJokeAction={aiGenerateJoke}
                   translateTextAction={aiTranslateText}
+                  generateImageAction={aiGenerateImage} // Pass the new action
                 />
               </div>
             ))}

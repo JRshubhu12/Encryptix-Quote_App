@@ -3,46 +3,117 @@
 
 import type { GenerateJokeInput, GenerateJokeOutput } from '@/ai/flows/generate-joke';
 import type { TranslateTextInput, TranslateTextOutput } from '@/ai/flows/translate-text-flow';
+import type { GenerateImageInput, GenerateImageOutput } from '@/ai/flows/generate-image-flow'; // Import image flow types
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import Image from 'next/image'; // Use next/image
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface QuoteCardProps {
   quote: QuoteItem;
   onUpdateQuote: (updatedQuote: QuoteItem) => void;
   generateJokeAction: (input: GenerateJokeInput) => Promise<GenerateJokeOutput>;
   translateTextAction: (input: TranslateTextInput) => Promise<TranslateTextOutput>;
+  generateImageAction: (input: GenerateImageInput) => Promise<GenerateImageOutput>; // New prop
 }
 
-export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, translateTextAction }: QuoteCardProps) {
+export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, translateTextAction, generateImageAction }: QuoteCardProps) {
   const [isFlippedInternal, setIsFlippedInternal] = useState(quote.isFlipped);
   const [isLoadingJoke, setIsLoadingJoke] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
+  const [internalImageUrl, setInternalImageUrl] = useState<string | undefined>(quote.imageUrl);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+
   const { toast } = useToast();
 
-  // Sync internal flipped state if prop changes (e.g. parent resets it)
   useEffect(() => {
     setIsFlippedInternal(quote.isFlipped);
   }, [quote.isFlipped]);
 
+  useEffect(() => {
+    setInternalImageUrl(quote.imageUrl);
+  }, [quote.imageUrl]);
+
+  // Effect to auto-generate image if not present
+  useEffect(() => {
+    const generateImage = async () => {
+      if (!internalImageUrl && !isGeneratingImage && !imageError && quote.quote) {
+        setIsGeneratingImage(true);
+        setImageError(null);
+        try {
+          const result = await generateImageAction({ quoteText: quote.quote });
+          setInternalImageUrl(result.imageUrl);
+          onUpdateQuote({ ...quote, imageUrl: result.imageUrl });
+        } catch (error) {
+          console.error('Failed to generate image:', error);
+          setImageError('Could not generate image.');
+          toast({
+            variant: 'destructive',
+            title: 'Image Generation Failed',
+            description: 'Could not create an image for this quote.',
+          });
+        } finally {
+          setIsGeneratingImage(false);
+        }
+      }
+    };
+    generateImage();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quote.quote, internalImageUrl, isGeneratingImage, generateImageAction, onUpdateQuote, imageError]); // quote.id was missing if quote could change
+
+
   const toggleFlip = () => {
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
     const newFlippedState = !isFlippedInternal;
     setIsFlippedInternal(newFlippedState);
     onUpdateQuote({ ...quote, isFlipped: newFlippedState });
   };
 
+  const handleSpeak = useCallback((textToSpeak?: string) => {
+    if (!textToSpeak) return;
+
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false); // Immediately update speaking state
+      // If the same text was requested, stop here. Otherwise, proceed to speak new text.
+      // This logic is tricky with just one isSpeaking flag. For simplicity, cancel always, then speak if different text or was not speaking.
+    }
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast({
+        variant: 'destructive',
+        title: 'Speech Error',
+        description: 'Could not play audio.',
+      });
+    };
+    speechSynthesis.speak(utterance);
+  }, [toast]);
+
+
   const handleGenerateJoke = async () => {
     setIsLoadingJoke(true);
     try {
-      const result = await generateJokeAction({ quote: quote.quote }); // Use original quote for joke generation
+      const result = await generateJokeAction({ quote: quote.quote });
       const newJoke = result.joke;
       
-      // If currently translated, translate the new joke as well
       let newDisplayJoke = newJoke;
       if (quote.isTranslatedToHindi) {
         const translationResult = await translateTextAction({ text: newJoke, targetLanguage: 'Hindi' });
@@ -50,7 +121,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       }
 
       onUpdateQuote({ ...quote, joke: newJoke, displayJoke: newDisplayJoke, isFlipped: true });
-      setIsFlippedInternal(true); // Ensure card flips to joke side
+      setIsFlippedInternal(true);
       toast({
         title: 'Joke Generated!',
         description: 'A fresh joke has been crafted for you.',
@@ -69,8 +140,11 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
   };
 
   const handleTranslate = async () => {
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
     if (quote.isTranslatedToHindi) {
-      // If already translated, revert to original
       onUpdateQuote({
         ...quote,
         displayQuote: quote.quote,
@@ -114,7 +188,6 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       setIsLoadingTranslation(false);
     }
   };
-
 
   const handleLike = () => {
     const newLikes = quote.isLikedByCurrentUser ? quote.likes -1 : quote.likes + 1;
@@ -174,8 +247,6 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
         });
       } catch (error) {
         console.error('Error using native share:', error);
-        // Fallback to copy if native share fails or is cancelled by user.
-        // Some browsers/OS might throw error if share is cancelled.
         if (error instanceof DOMException && error.name === 'AbortError') {
           toast({
             variant: 'default',
@@ -202,17 +273,43 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     <Card className="w-full max-w-md shadow-xl rounded-lg flex flex-col bg-transparent border-0">
       <div
         className={cn(
-          'relative transition-transform duration-700 ease-in-out w-full h-64 md:h-72 preserve-3d',
+          'relative transition-transform duration-700 ease-in-out w-full preserve-3d',
+          // Adjust height based on content. Image adds ~180px + margin. Min height needed.
+          // Let's make it taller to accommodate the image.
+          'h-[380px] md:h-[420px]', 
           isFlippedInternal ? 'my-rotate-y-180' : ''
         )}
       >
         {/* Front Face */}
-        <div className="absolute w-full h-full bg-card rounded-t-lg p-6 flex flex-col justify-between backface-hidden border shadow-sm">
-          <div className="overflow-y-auto h-full flex flex-col justify-center">
-            <blockquote className="text-xl md:text-2xl italic font-serif text-foreground/90">
+        <div className="absolute w-full h-full bg-card rounded-t-lg p-4 flex flex-col justify-between backface-hidden border shadow-sm">
+          <div className="mb-3 h-[160px] md:h-[180px] w-full rounded-md overflow-hidden bg-muted flex items-center justify-center relative">
+            {isGeneratingImage ? (
+              <Skeleton className="h-full w-full" />
+            ) : internalImageUrl ? (
+              <Image src={internalImageUrl} alt={`Visual for: ${quote.quote.substring(0,30)}...`} width={320} height={180} className="object-cover w-full h-full" priority={false} />
+            ) : imageError ? (
+                <div className="flex flex-col items-center justify-center text-destructive">
+                    <AlertCircle className="w-8 h-8 mb-1" />
+                    <span className="text-xs text-center">{imageError}</span>
+                </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                 <ImageIcon className="w-8 h-8 mb-1 text-gray-400" />
+                 <span className="text-xs">Loading image...</span>
+              </div>
+            )}
+          </div>
+
+          <div className="overflow-y-auto flex-grow flex flex-col justify-center mb-2"> {/* Added mb-2 for spacing */}
+            <blockquote className="text-lg md:text-xl italic font-serif text-foreground/90">
               "{quote.displayQuote}"
             </blockquote>
-            <p className="text-right text-sm text-muted-foreground mt-3">- {quote.author}</p>
+            <div className="flex justify-between items-center mt-2">
+                <p className="text-right text-xs text-muted-foreground">- {quote.author}</p>
+                <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayQuote)} disabled={isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayQuote} aria-label="Listen to quote" className="h-7 w-7 hover:bg-accent/10">
+                    <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayQuote) ? "text-primary" : "hover:text-primary")} />
+                </Button>
+            </div>
           </div>
           <Button variant="link" onClick={(e) => { e.stopPropagation(); toggleFlip(); }} className="text-primary self-center mt-auto p-1 text-xs">
             Tap for Joke
@@ -220,16 +317,23 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
         </div>
 
         {/* Back Face */}
-        <div className="absolute w-full h-full bg-card rounded-t-lg p-6 flex flex-col justify-between my-rotate-y-180 backface-hidden border shadow-sm">
+        <div className="absolute w-full h-full bg-card rounded-t-lg p-6 flex flex-col justify-center my-rotate-y-180 backface-hidden border shadow-sm"> {/* Centered content */}
           <div className="overflow-y-auto h-full flex flex-col justify-center">
             <h3 className="text-lg font-semibold text-primary mb-2">Joke Time!</h3>
-            {isLoadingJoke || (isLoadingTranslation && quote.joke) ? ( // Show loading if translating and joke exists
+            {isLoadingJoke || (isLoadingTranslation && quote.joke) ? (
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <RefreshCw className="h-4 w-4 animate-spin text-primary" />
                 <span>{isLoadingJoke ? 'Crafting a joke...' : 'Translating joke...'}</span>
               </div>
             ) : quote.displayJoke ? (
-              <p className="text-foreground/90">{quote.displayJoke}</p>
+              <div>
+                <p className="text-foreground/90">{quote.displayJoke}</p>
+                <div className="flex justify-end mt-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleSpeak(quote.displayJoke)} disabled={isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayJoke} aria-label="Listen to joke" className="h-7 w-7 hover:bg-accent/10">
+                        <Volume2 className={cn("w-4 h-4 text-muted-foreground", (isSpeaking && speechSynthesis.speaking && speechSynthesis.utterance?.text === quote.displayJoke) ? "text-primary" : "hover:text-primary")} />
+                    </Button>
+                </div>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">No joke here yet! Generate one or tap to flip.</p>
             )}
@@ -306,4 +410,3 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     </Card>
   );
 }
-

@@ -12,4 +12,7 @@ export interface QuoteItem {
   displayQuote: string; // Text to actually display for the quote
   displayJoke?: string; // Text to actually display for the joke
   isTranslatedToHindi: boolean; // Flag to indicate if current display is Hindi
+
+  // New field for AI-generated image
+  imageUrl?: string;
 }
