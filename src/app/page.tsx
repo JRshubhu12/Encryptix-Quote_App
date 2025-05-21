@@ -3,7 +3,7 @@
 
 import { generateJoke as aiGenerateJoke } from '@/ai/flows/generate-joke';
 import { translateText as aiTranslateText } from '@/ai/flows/translate-text-flow';
-import { generateImageForQuote as aiGenerateImage } from '@/ai/flows/generate-image-flow.ts'; // Import the new flow
+// Removed: import { generateImageForQuote as aiGenerateImage } from '@/ai/flows/generate-image-flow.ts'; 
 import QuoteCard from '@/components/quote-card';
 import type { QuoteItem } from '@/lib/types';
 import { MessageSquareQuote } from 'lucide-react';
@@ -24,6 +24,11 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
+    // Initialize PEXELS_API_KEY in environment for client-side access (prototype only)
+    if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_PEXELS_API_KEY && process.env.PEXELS_API_KEY) {
+      process.env.NEXT_PUBLIC_PEXELS_API_KEY = process.env.PEXELS_API_KEY;
+    }
+
     setQuotes(
       initialQuotesData.map(q => ({
         ...q,
@@ -35,7 +40,7 @@ export default function HomePage() {
         displayQuote: q.quote,
         displayJoke: undefined,
         isTranslatedToHindi: false,
-        imageUrl: undefined, // Initialize imageUrl
+        imageUrl: undefined, 
       }))
     );
   }, []);
@@ -80,7 +85,7 @@ export default function HomePage() {
                   onUpdateQuote={handleUpdateQuote}
                   generateJokeAction={aiGenerateJoke}
                   translateTextAction={aiTranslateText}
-                  generateImageAction={aiGenerateImage} // Pass the new action
+                  // Removed generateImageAction prop
                 />
               </div>
             ))}

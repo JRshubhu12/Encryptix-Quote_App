@@ -3,16 +3,17 @@
 
 import type { GenerateJokeInput, GenerateJokeOutput } from '@/ai/flows/generate-joke';
 import type { TranslateTextInput, TranslateTextOutput } from '@/ai/flows/translate-text-flow';
-import type { GenerateImageInput, GenerateImageOutput } from '@/ai/flows/generate-image-flow'; // Import image flow types
+// Removed: import type { GenerateImageInput, GenerateImageOutput } from '@/ai/flows/generate-image-flow'; 
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { fetchImageFromPexels } from '@/lib/pexels'; // Import Pexels fetcher
 import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import Image from 'next/image'; // Use next/image
+import Image from 'next/image'; 
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -21,19 +22,18 @@ interface QuoteCardProps {
   onUpdateQuote: (updatedQuote: QuoteItem) => void;
   generateJokeAction: (input: GenerateJokeInput) => Promise<GenerateJokeOutput>;
   translateTextAction: (input: TranslateTextInput) => Promise<TranslateTextOutput>;
-  generateImageAction: (input: GenerateImageInput) => Promise<GenerateImageOutput>; // New prop
+  // Removed: generateImageAction prop
 }
 
-export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, translateTextAction, generateImageAction }: QuoteCardProps) {
+export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, translateTextAction }: QuoteCardProps) {
   const [isFlippedInternal, setIsFlippedInternal] = useState(quote.isFlipped);
   const [isLoadingJoke, setIsLoadingJoke] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
   const [internalImageUrl, setInternalImageUrl] = useState<string | undefined>(quote.imageUrl);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isFetchingPexelsImage, setIsFetchingPexelsImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   
   const [isSpeaking, setIsSpeaking] = useState(false);
-
 
   const { toast } = useToast();
 
@@ -45,32 +45,54 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     setInternalImageUrl(quote.imageUrl);
   }, [quote.imageUrl]);
 
-  // Effect to auto-generate image if not present
+  const getPexelsQuery = useCallback((text: string): string => {
+    // Simple query: first 3 words, or author if quote is very short.
+    const words = text.split(' ').filter(Boolean);
+    if (words.length >= 3) {
+      return words.slice(0, 3).join(' ');
+    }
+    if (quote.author) {
+        const authorWords = quote.author.split(' ');
+        return authorWords[authorWords.length -1]; // last name of author
+    }
+    return text || "inspiration"; // fallback
+  }, [quote.author]);
+
+
+  // Effect to auto-generate image from Pexels if not present
   useEffect(() => {
-    const generateImage = async () => {
-      if (!internalImageUrl && !isGeneratingImage && !imageError && quote.quote) {
-        setIsGeneratingImage(true);
+    const loadImage = async () => {
+      if (!internalImageUrl && !isFetchingPexelsImage && !imageError && quote.quote) {
+        setIsFetchingPexelsImage(true);
         setImageError(null);
         try {
-          const result = await generateImageAction({ quoteText: quote.quote });
-          setInternalImageUrl(result.imageUrl);
-          onUpdateQuote({ ...quote, imageUrl: result.imageUrl });
+          const query = getPexelsQuery(quote.quote);
+          const imageUrl = await fetchImageFromPexels(query);
+          if (imageUrl) {
+            setInternalImageUrl(imageUrl);
+            onUpdateQuote({ ...quote, imageUrl: imageUrl });
+          } else {
+            setImageError('No image found.');
+            // Use a placeholder if Pexels doesn't return an image
+            const placeholderUrl = `https://placehold.co/320x180.png?text=${encodeURIComponent(query.substring(0,15))}`;
+            setInternalImageUrl(placeholderUrl);
+            onUpdateQuote({ ...quote, imageUrl: placeholderUrl });
+
+          }
         } catch (error) {
-          console.error('Failed to generate image:', error);
-          setImageError('Could not generate image.');
-          toast({
-            variant: 'destructive',
-            title: 'Image Generation Failed',
-            description: 'Could not create an image for this quote.',
-          });
+          console.error('Failed to fetch image from Pexels:', error);
+          setImageError('Could not load image.');
+           const placeholderUrl = `https://placehold.co/320x180.png?text=Error`;
+           setInternalImageUrl(placeholderUrl);
+           onUpdateQuote({ ...quote, imageUrl: placeholderUrl });
         } finally {
-          setIsGeneratingImage(false);
+          setIsFetchingPexelsImage(false);
         }
       }
     };
-    generateImage();
+    loadImage();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quote.quote, internalImageUrl, isGeneratingImage, generateImageAction, onUpdateQuote, imageError]); // quote.id was missing if quote could change
+  }, [quote.id, quote.quote, internalImageUrl, isFetchingPexelsImage, onUpdateQuote, imageError, getPexelsQuery]);
 
 
   const toggleFlip = () => {
@@ -88,9 +110,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
 
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
-      setIsSpeaking(false); // Immediately update speaking state
-      // If the same text was requested, stop here. Otherwise, proceed to speak new text.
-      // This logic is tricky with just one isSpeaking flag. For simplicity, cancel always, then speak if different text or was not speaking.
+      setIsSpeaking(false); 
     }
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
@@ -248,11 +268,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       } catch (error) {
         console.error('Error using native share:', error);
         if (error instanceof DOMException && error.name === 'AbortError') {
-          toast({
-            variant: 'default',
-            title: 'Share Cancelled',
-            description: 'You cancelled the share action.',
-          });
+          // No toast for abort
         } else {
           copyToClipboard(textToShare);
           toast({
@@ -274,8 +290,6 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       <div
         className={cn(
           'relative transition-transform duration-700 ease-in-out w-full preserve-3d',
-          // Adjust height based on content. Image adds ~180px + margin. Min height needed.
-          // Let's make it taller to accommodate the image.
           'h-[380px] md:h-[420px]', 
           isFlippedInternal ? 'my-rotate-y-180' : ''
         )}
@@ -283,10 +297,19 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
         {/* Front Face */}
         <div className="absolute w-full h-full bg-card rounded-t-lg p-4 flex flex-col justify-between backface-hidden border shadow-sm">
           <div className="mb-3 h-[160px] md:h-[180px] w-full rounded-md overflow-hidden bg-muted flex items-center justify-center relative">
-            {isGeneratingImage ? (
+            {isFetchingPexelsImage ? (
               <Skeleton className="h-full w-full" />
             ) : internalImageUrl ? (
-              <Image src={internalImageUrl} alt={`Visual for: ${quote.quote.substring(0,30)}...`} width={320} height={180} className="object-cover w-full h-full" priority={false} />
+              <Image 
+                src={internalImageUrl} 
+                alt={`Visual for: ${quote.quote.substring(0,30)}...`} 
+                width={320} 
+                height={180} 
+                className="object-cover w-full h-full" 
+                priority={false} 
+                data-ai-hint={getPexelsQuery(quote.quote)}
+                unoptimized={internalImageUrl.startsWith('https://placehold.co')} // Don't optimize placeholders
+              />
             ) : imageError ? (
                 <div className="flex flex-col items-center justify-center text-destructive">
                     <AlertCircle className="w-8 h-8 mb-1" />
@@ -300,7 +323,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
             )}
           </div>
 
-          <div className="overflow-y-auto flex-grow flex flex-col justify-center mb-2"> {/* Added mb-2 for spacing */}
+          <div className="overflow-y-auto flex-grow flex flex-col justify-center mb-2">
             <blockquote className="text-lg md:text-xl italic font-serif text-foreground/90">
               "{quote.displayQuote}"
             </blockquote>
@@ -317,7 +340,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
         </div>
 
         {/* Back Face */}
-        <div className="absolute w-full h-full bg-card rounded-t-lg p-6 flex flex-col justify-center my-rotate-y-180 backface-hidden border shadow-sm"> {/* Centered content */}
+        <div className="absolute w-full h-full bg-card rounded-t-lg p-6 flex flex-col justify-center my-rotate-y-180 backface-hidden border shadow-sm"> 
           <div className="overflow-y-auto h-full flex flex-col justify-center">
             <h3 className="text-lg font-semibold text-primary mb-2">Joke Time!</h3>
             {isLoadingJoke || (isLoadingTranslation && quote.joke) ? (
