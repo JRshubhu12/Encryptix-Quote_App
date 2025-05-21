@@ -174,12 +174,22 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
         });
       } catch (error) {
         console.error('Error using native share:', error);
-        copyToClipboard(textToShare);
-        toast({
-          variant: 'default', 
-          title: 'Copied to Clipboard',
-          description: 'Native share failed or was cancelled. Content copied instead.',
-        });
+        // Fallback to copy if native share fails or is cancelled by user.
+        // Some browsers/OS might throw error if share is cancelled.
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          toast({
+            variant: 'default',
+            title: 'Share Cancelled',
+            description: 'You cancelled the share action.',
+          });
+        } else {
+          copyToClipboard(textToShare);
+          toast({
+            variant: 'default', 
+            title: 'Copied to Clipboard',
+            description: 'Native share failed or was cancelled. Content copied instead.',
+          });
+        }
       }
     } else {
       copyToClipboard(textToShare);
@@ -271,13 +281,13 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
           </Popover>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col items-end space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
           <Button
             onClick={(e) => { e.stopPropagation(); handleTranslate(); }}
             disabled={isLoadingTranslation}
             size="sm"
             variant="outline"
-            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary shadow-sm rounded-md"
+            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary shadow-sm rounded-md w-full sm:w-auto"
           >
             {isLoadingTranslation ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Languages className="w-4 h-4 mr-2" />}
             {isLoadingTranslation ? "Translating..." : quote.isTranslatedToHindi ? "Show Original" : "To Hindi"}
@@ -286,7 +296,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
             onClick={(e) => { e.stopPropagation(); handleGenerateJoke(); }} 
             disabled={isLoadingJoke || isLoadingTranslation} 
             size="sm" 
-            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm rounded-md"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-sm rounded-md w-full sm:w-auto"
           >
             {quote.isFlipped && quote.joke ? <Sparkles className="w-4 h-4 mr-2" /> : <Lightbulb className="w-4 h-4 mr-2" />}
             {isLoadingJoke ? "Thinking..." : quote.joke ? "New Joke" : "Get Joke"}
@@ -296,3 +306,4 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     </Card>
   );
 }
+
