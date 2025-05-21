@@ -1,13 +1,15 @@
+
 'use client';
 
 import type { GenerateJokeInput, GenerateJokeOutput } from '@/ai/flows/generate-joke';
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Bookmark, Heart, Lightbulb, RefreshCw, Share2 } from 'lucide-react';
+import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface QuoteCardProps {
   quote: QuoteItem;
@@ -23,8 +25,6 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
   const toggleFlip = () => {
     const newFlippedState = !isFlippedInternal;
     setIsFlippedInternal(newFlippedState);
-    // Keep parent state in sync if needed, or manage flip purely internally
-    // For this example, we'll update parent's isFlipped for consistency if it matters elsewhere
     onUpdateQuote({ ...quote, isFlipped: newFlippedState });
   };
 
@@ -34,7 +34,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
       const result = await generateJokeAction({ quote: quote.quote });
       const newJoke = result.joke;
       onUpdateQuote({ ...quote, joke: newJoke, isFlipped: true });
-      setIsFlippedInternal(true); // Ensure card flips to show the new joke
+      setIsFlippedInternal(true);
       toast({
         title: 'Joke Generated!',
         description: 'A fresh joke has been crafted for you.',
@@ -46,7 +46,6 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
         title: 'Error Generating Joke',
         description: 'Could not generate a new joke at this time. Please try again.',
       });
-      // Optionally set a placeholder error joke
       onUpdateQuote({ ...quote, joke: "Oops! My joke circuits are a bit fuzzy right now." });
     } finally {
       setIsLoadingJoke(false);
@@ -54,11 +53,9 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
   };
 
   const handleLike = () => {
-    // Basic like toggle for demo; in a real app, this would be more complex
-    const newLikes = quote.isLikedByCurrentUser ? quote.likes -1 : quote.likes + 1; // A mock field for demo
+    const newLikes = quote.isLikedByCurrentUser ? quote.likes -1 : quote.likes + 1;
     const newIsLiked = !quote.isLikedByCurrentUser;
-
-    onUpdateQuote({ ...quote, likes: newLikes, isLikedByCurrentUser: newIsLiked } as any); // any for demo field
+    onUpdateQuote({ ...quote, likes: newLikes, isLikedByCurrentUser: newIsLiked } as any);
     if (newIsLiked) {
         toast({
         title: 'Liked!',
@@ -76,22 +73,6 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
     });
   };
 
-  const handleShare = () => {
-    const textToShare = `Quote: "${quote.quote}" - ${quote.author}${quote.joke ? `\n\nJoke: ${quote.joke}` : ''}`;
-    if (navigator.share) {
-      navigator.share({
-        title: 'Check out this QuoteCraft card!',
-        text: textToShare,
-      }).catch(error => {
-        console.error('Error sharing:', error)
-        // Fallback to clipboard copy if share fails or is cancelled
-        copyToClipboard(textToShare);
-      });
-    } else {
-      copyToClipboard(textToShare);
-    }
-  };
-
   const copyToClipboard = (text: string) => {
      navigator.clipboard.writeText(text)
       .then(() => toast({ title: 'Copied to Clipboard!', description: 'Quote details are ready to paste.' }))
@@ -99,7 +80,51 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
         console.error('Failed to copy text: ', err);
         toast({ variant: 'destructive', title: 'Copy Failed', description: 'Could not copy details to clipboard.' });
       });
-  }
+  };
+
+  const textToShare = `Quote: "${quote.quote}" - ${quote.author}${quote.joke ? `\n\nJoke: ${quote.joke}` : ''}`;
+  const pageUrl = typeof window !== "undefined" ? window.location.href : 'https://quotecraft.example.com'; // Replace with your actual app URL
+
+  const shareOnTwitter = () => {
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(textToShare)}&url=${encodeURIComponent(pageUrl)}`;
+    window.open(twitterUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const shareOnFacebook = () => {
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}&quote=${encodeURIComponent(textToShare)}`;
+    window.open(facebookUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const shareOnWhatsApp = () => {
+    const whatsAppUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(textToShare + ' ' + pageUrl)}`;
+    window.open(whatsAppUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const nativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Quote by ${quote.author} - QuoteCraft`,
+          text: textToShare,
+          url: pageUrl,
+        });
+      } catch (error) {
+        console.error('Error using native share:', error);
+        // Fallback to clipboard if native share fails or is cancelled by user
+        copyToClipboard(textToShare);
+        toast({
+          variant: 'default', // Changed from destructive as it's a fallback
+          title: 'Copied to Clipboard',
+          description: 'Native share failed or was cancelled. Content copied instead.',
+        });
+      }
+    } else {
+      // Should not happen if button is only rendered when navigator.share is true, but as a safe fallback
+      copyToClipboard(textToShare);
+      toast({ title: 'Copied to Clipboard!', description: 'Native share not available. Content copied instead.' });
+    }
+  };
+
 
   return (
     <Card className="w-full max-w-md shadow-xl rounded-lg flex flex-col bg-transparent border-0">
@@ -153,9 +178,36 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSave(); }} aria-label="Save" className="hover:bg-accent/10 rounded-full">
             <Bookmark className={cn('w-5 h-5', quote.isSaved ? 'text-accent fill-accent' : 'text-muted-foreground hover:text-accent/80')} />
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleShare(); }} aria-label="Share" className="hover:bg-accent/10 rounded-full">
-            <Share2 className="w-5 h-5 text-muted-foreground hover:text-primary" />
-          </Button>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Share" className="hover:bg-accent/10 rounded-full" onClick={(e) => e.stopPropagation()}>
+                <Share2 className="w-5 h-5 text-muted-foreground hover:text-primary" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-col gap-1">
+                <Button variant="ghost" className="justify-start px-2 py-1.5 h-auto text-sm" onClick={(e) => { e.stopPropagation(); copyToClipboard(textToShare); }}>
+                  <Copy className="mr-2 h-4 w-4" /> Copy Text
+                </Button>
+                {typeof navigator !== "undefined" && navigator.share && (
+                  <Button variant="ghost" className="justify-start px-2 py-1.5 h-auto text-sm" onClick={(e) => { e.stopPropagation(); nativeShare(); }}>
+                    <Smartphone className="mr-2 h-4 w-4" /> Share via...
+                  </Button>
+                )}
+                <Button variant="ghost" className="justify-start px-2 py-1.5 h-auto text-sm" onClick={(e) => { e.stopPropagation(); shareOnTwitter(); }}>
+                  <Twitter className="mr-2 h-4 w-4" /> Share on Twitter
+                </Button>
+                <Button variant="ghost" className="justify-start px-2 py-1.5 h-auto text-sm" onClick={(e) => { e.stopPropagation(); shareOnFacebook(); }}>
+                  <Facebook className="mr-2 h-4 w-4" /> Share on Facebook
+                </Button>
+                <Button variant="ghost" className="justify-start px-2 py-1.5 h-auto text-sm" onClick={(e) => { e.stopPropagation(); shareOnWhatsApp(); }}>
+                  <MessageSquare className="mr-2 h-4 w-4" /> Share on WhatsApp
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
         </div>
         <Button 
           onClick={(e) => { e.stopPropagation(); handleGenerateJoke(); }} 
@@ -170,3 +222,5 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction }: 
     </Card>
   );
 }
+
+    
