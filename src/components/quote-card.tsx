@@ -3,11 +3,10 @@
 
 import type { GenerateJokeInput, GenerateJokeOutput } from '@/ai/flows/generate-joke';
 import type { TranslateTextInput, TranslateTextOutput } from '@/ai/flows/translate-text-flow';
-// Removed: import type { GenerateImageInput, GenerateImageOutput } from '@/ai/flows/generate-image-flow'; 
 import type { QuoteItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { fetchImageFromPexels } from '@/lib/pexels'; // Import Pexels fetcher
+import { fetchImageFromApiNinjas } from '@/lib/api-ninjas-images'; // Import API Ninjas fetcher
 import { Bookmark, Heart, Lightbulb, RefreshCw, Share2, Copy, Smartphone, Twitter, Facebook, MessageSquare, Languages, Sparkles, Volume2, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,6 @@ interface QuoteCardProps {
   onUpdateQuote: (updatedQuote: QuoteItem) => void;
   generateJokeAction: (input: GenerateJokeInput) => Promise<GenerateJokeOutput>;
   translateTextAction: (input: TranslateTextInput) => Promise<TranslateTextOutput>;
-  // Removed: generateImageAction prop
 }
 
 export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, translateTextAction }: QuoteCardProps) {
@@ -30,7 +28,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
   const [isLoadingJoke, setIsLoadingJoke] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
   const [internalImageUrl, setInternalImageUrl] = useState<string | undefined>(quote.imageUrl);
-  const [isFetchingPexelsImage, setIsFetchingPexelsImage] = useState(false);
+  const [isFetchingImage, setIsFetchingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -45,11 +43,11 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     setInternalImageUrl(quote.imageUrl);
   }, [quote.imageUrl]);
 
-  const getPexelsQuery = useCallback((text: string): string => {
-    // Simple query: first 3 words, or author if quote is very short.
+  const getImageQuery = useCallback((text: string): string => {
+    // Simple query: first 3-5 words, or author if quote is very short.
     const words = text.split(' ').filter(Boolean);
     if (words.length >= 3) {
-      return words.slice(0, 3).join(' ');
+      return words.slice(0, Math.min(words.length, 5)).join(' ');
     }
     if (quote.author) {
         const authorWords = quote.author.split(' ');
@@ -59,40 +57,42 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
   }, [quote.author]);
 
 
-  // Effect to auto-generate image from Pexels if not present
   useEffect(() => {
     const loadImage = async () => {
-      if (!internalImageUrl && !isFetchingPexelsImage && !imageError && quote.quote) {
-        setIsFetchingPexelsImage(true);
+      if (!internalImageUrl && !isFetchingImage && !imageError && quote.quote) {
+        setIsFetchingImage(true);
         setImageError(null);
         try {
-          const query = getPexelsQuery(quote.quote);
-          const imageUrl = await fetchImageFromPexels(query);
+          const query = getImageQuery(quote.quote);
+          // Example category, could be dynamic or configurable
+          // For API Ninjas, 'nature', 'city', 'technology', 'food', 'still_life', 'abstract', 'wildlife' are examples
+          const categories = ['nature', 'abstract', 'technology', 'inspiration'];
+          const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+          
+          const imageUrl = await fetchImageFromApiNinjas(query, randomCategory);
           if (imageUrl) {
             setInternalImageUrl(imageUrl);
             onUpdateQuote({ ...quote, imageUrl: imageUrl });
           } else {
             setImageError('No image found.');
-            // Use a placeholder if Pexels doesn't return an image
             const placeholderUrl = `https://placehold.co/320x180.png?text=${encodeURIComponent(query.substring(0,15))}`;
             setInternalImageUrl(placeholderUrl);
             onUpdateQuote({ ...quote, imageUrl: placeholderUrl });
-
           }
         } catch (error) {
-          console.error('Failed to fetch image from Pexels:', error);
+          console.error('Failed to fetch image from API Ninjas:', error);
           setImageError('Could not load image.');
            const placeholderUrl = `https://placehold.co/320x180.png?text=Error`;
            setInternalImageUrl(placeholderUrl);
            onUpdateQuote({ ...quote, imageUrl: placeholderUrl });
         } finally {
-          setIsFetchingPexelsImage(false);
+          setIsFetchingImage(false);
         }
       }
     };
     loadImage();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quote.id, quote.quote, internalImageUrl, isFetchingPexelsImage, onUpdateQuote, imageError, getPexelsQuery]);
+  }, [quote.id, quote.quote, internalImageUrl, isFetchingImage, onUpdateQuote, imageError, getImageQuery]);
 
 
   const toggleFlip = () => {
@@ -297,7 +297,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
         {/* Front Face */}
         <div className="absolute w-full h-full bg-card rounded-t-lg p-4 flex flex-col justify-between backface-hidden border shadow-sm">
           <div className="mb-3 h-[160px] md:h-[180px] w-full rounded-md overflow-hidden bg-muted flex items-center justify-center relative">
-            {isFetchingPexelsImage ? (
+            {isFetchingImage ? (
               <Skeleton className="h-full w-full" />
             ) : internalImageUrl ? (
               <Image 
@@ -307,8 +307,8 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
                 height={180} 
                 className="object-cover w-full h-full" 
                 priority={false} 
-                data-ai-hint={getPexelsQuery(quote.quote)}
-                unoptimized={internalImageUrl.startsWith('https://placehold.co')} // Don't optimize placeholders
+                data-ai-hint={getImageQuery(quote.quote)}
+                unoptimized={internalImageUrl.startsWith('https://placehold.co')}
               />
             ) : imageError ? (
                 <div className="flex flex-col items-center justify-center text-destructive">

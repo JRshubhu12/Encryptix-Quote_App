@@ -3,7 +3,6 @@
 
 import { generateJoke as aiGenerateJoke } from '@/ai/flows/generate-joke';
 import { translateText as aiTranslateText } from '@/ai/flows/translate-text-flow';
-// Removed: import { generateImageForQuote as aiGenerateImage } from '@/ai/flows/generate-image-flow.ts'; 
 import QuoteCard from '@/components/quote-card';
 import type { QuoteItem } from '@/lib/types';
 import { MessageSquareQuote } from 'lucide-react';
@@ -16,14 +15,13 @@ const initialQuotesData: Omit<QuoteItem, 'joke' | 'likes' | 'isSaved' | 'isFlipp
   { id: '4', quote: "Your time is limited, so don’t waste it living someone else’s life.", author: "Steve Jobs"},
   { id: '5', quote: "The best way to predict the future is to create it.", author: "Peter Drucker" },
   { id: '6', quote: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
-  // Added new quotes for diversity
   { id: '7', quote: "Happiness is not something ready made. It comes from your own actions.", author: "Dalai Lama" },
   { id: '8', quote: "The only joy in the world is to begin.", author: "Cesare Pavese" },
   { id: '9', quote: "Look deep into nature, and then you will understand everything better.", author: "Albert Einstein" },
   { id: '10', quote: "The clearest way into the Universe is through a forest wilderness.", author: "John Muir" },
   { id: '11', quote: "Tears are words that need to be written.", author: "Paulo Coelho" }, // Evokes sadness
   { id: '12', quote: "Sadness flies away on the wings of time.", author: "Jean de La Fontaine" },
-  { id: '13', quote: "In the rainforest, life thrives in abundance.", author: "Unknown" }, // Specific theme
+  { id: '13', quote: "In the rainforest, life thrives in abundance.", author: "Amazon" }, // Specific theme
   { id: '14', quote: "Every sunset brings the promise of a new dawn.", author: "Ralph Waldo Emerson" }, // Evokes hope, visuals
   { id: '15', quote: "Technology is best when it brings people together.", author: "Matt Mullenweg" },
   { id: '16', quote: "Art enables us to find ourselves and lose ourselves at the same time.", author: "Thomas Merton" },
@@ -39,9 +37,9 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Initialize PEXELS_API_KEY in environment for client-side access (prototype only)
-    if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_PEXELS_API_KEY && process.env.PEXELS_API_KEY) {
-      process.env.NEXT_PUBLIC_PEXELS_API_KEY = process.env.PEXELS_API_KEY;
+    // Initialize API_NINJAS_API_KEY in environment for client-side access (prototype only)
+    if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_NINJAS_API_KEY && process.env.API_NINJAS_API_KEY) {
+      process.env.NEXT_PUBLIC_API_NINJAS_API_KEY = process.env.API_NINJAS_API_KEY;
     }
 
     setQuotes(
@@ -100,7 +98,6 @@ export default function HomePage() {
                   onUpdateQuote={handleUpdateQuote}
                   generateJokeAction={aiGenerateJoke}
                   translateTextAction={aiTranslateText}
-                  // Removed generateImageAction prop
                 />
               </div>
             ))}
