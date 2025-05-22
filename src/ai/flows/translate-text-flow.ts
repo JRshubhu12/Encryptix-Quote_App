@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Translates text into a specified target language using AI.
@@ -46,21 +47,43 @@ const translateTextFlow = ai.defineFlow(
       const result = await prompt(input);
 
       if (!result || !result.output || typeof result.output.translatedText !== 'string' || result.output.translatedText.trim() === '') {
-        console.error('Translation flow: Invalid or missing output from AI model.', { input, output: result?.output });
+        // Log the problematic output structure for server-side debugging
+        console.error(
+          'TranslateTextFlow: Invalid or missing output from AI model.', 
+          { 
+            input, 
+            outputReceived: result?.output 
+          }
+        );
         throw new Error('Translation failed: AI model did not return valid translated text.');
       }
       
       return result.output;
 
     } catch (error) {
-      console.error(`Error in translateTextFlow for input "${input.text}" to ${input.targetLanguage}:`, error);
-      // Re-throw the error to be caught by the calling Server Action/Component context
-      // This allows the client-side to also handle it via its own try/catch.
+      let errorMessageToPropagate = 'An unknown error occurred in the translation service.';
+      let errorDetailsForLogging: any = { originalError: String(error) };
+
       if (error instanceof Error) {
-        // Prepend a more specific message if desired, or just re-throw
-        throw new Error(`Translation service failed: ${error.message}`);
+        errorMessageToPropagate = `Translation service failed: ${error.message}`; // This message might be masked on client in prod
+        errorDetailsForLogging = {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          // Include any other relevant properties if known for specific error types
+        };
       }
-      throw new Error('An unknown error occurred in the translation service.');
+      
+      // Log detailed error information on the server
+      console.error(
+        `TranslateTextFlow Error: Failed to translate input text "${input.text}" to ${input.targetLanguage}. Details:`, 
+        JSON.stringify(errorDetailsForLogging, null, 2) // Stringify for better structured logging
+      );
+      
+      // Re-throw a new error. The message here is what the client-side catch block will primarily see.
+      // Next.js might still replace this message with a generic one in production on the client-side,
+      // but the server logs will have the details.
+      throw new Error(errorMessageToPropagate);
     }
   }
 );
