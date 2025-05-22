@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { GenerateJokeInput, GenerateJokeOutput } from '@/ai/flows/generate-joke';
@@ -25,10 +24,8 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
   const [isFlippedInternal, setIsFlippedInternal] = useState(quote.isFlipped);
   const [isLoadingJoke, setIsLoadingJoke] = useState(false);
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
-  
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentSpokenText, setCurrentSpokenText] = useState<string | undefined>(undefined);
-
 
   const { toast } = useToast();
 
@@ -44,7 +41,6 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quote.id]); // Only run on ID change (effectively mount for this card instance)
-
 
   const toggleFlip = () => {
     if (speechSynthesis.speaking) {
@@ -126,6 +122,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     }
   };
 
+  // ----------- MODIFIED TRANSLATION LOGIC -----------
   const handleTranslate = async () => {
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
@@ -148,7 +145,9 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
 
     setIsLoadingTranslation(true);
     try {
+      // Always translate the original quote to Hindi
       const translatedQuoteText = await translateTextAction({ text: quote.quote, targetLanguage: 'Hindi' });
+      // If joke exists, translate it too
       let translatedJokeText: string | undefined = undefined;
       if (quote.joke) {
         const jokeTranslationResult = await translateTextAction({ text: quote.joke, targetLanguage: 'Hindi' });
@@ -176,6 +175,7 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
       setIsLoadingTranslation(false);
     }
   };
+  // --------------------------------------------------
 
   const handleSave = () => {
     const newSavedState = !quote.isSaved;
@@ -379,4 +379,3 @@ export default function QuoteCard({ quote, onUpdateQuote, generateJokeAction, tr
     </Card>
   );
 }
-
