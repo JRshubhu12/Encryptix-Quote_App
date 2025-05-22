@@ -41,8 +41,26 @@ const translateTextFlow = ai.defineFlow(
     inputSchema: TranslateTextInputSchema,
     outputSchema: TranslateTextOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  async (input): Promise<TranslateTextOutput> => {
+    try {
+      const result = await prompt(input);
+
+      if (!result || !result.output || typeof result.output.translatedText !== 'string' || result.output.translatedText.trim() === '') {
+        console.error('Translation flow: Invalid or missing output from AI model.', { input, output: result?.output });
+        throw new Error('Translation failed: AI model did not return valid translated text.');
+      }
+      
+      return result.output;
+
+    } catch (error) {
+      console.error(`Error in translateTextFlow for input "${input.text}" to ${input.targetLanguage}:`, error);
+      // Re-throw the error to be caught by the calling Server Action/Component context
+      // This allows the client-side to also handle it via its own try/catch.
+      if (error instanceof Error) {
+        // Prepend a more specific message if desired, or just re-throw
+        throw new Error(`Translation service failed: ${error.message}`);
+      }
+      throw new Error('An unknown error occurred in the translation service.');
+    }
   }
 );
