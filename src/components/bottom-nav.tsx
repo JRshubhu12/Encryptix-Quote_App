@@ -13,12 +13,12 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   const handleShareClick = () => {
-    const appUrl = typeof window !== "undefined" ? window.location.origin : 'https://quotecraft.example.com';
+    const appUrl = 'https://bit.ly/QuoteCraft'; // Updated to Bitly link
     const portfolioUrl = 'https://shubhamcoder.netlify.app/';
     
     const shareData = {
       title: `QuoteCraft by Shubham - Inspiration & Humor`,
-      text: `Explore QuoteCraft for inspiring quotes and fun jokes!\nDeveloped by Shubham: ${portfolioUrl}`,
+      text: `Explore QuoteCraft for inspiring quotes and fun jokes!\nDeveloped by Shubham: ${portfolioUrl}\n\nCheck it out: ${appUrl}`,
       url: appUrl,
     };
 
