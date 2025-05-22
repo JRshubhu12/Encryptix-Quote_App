@@ -1,17 +1,16 @@
+
 'use server';
 /**
- * @fileOverview Translates text into a specified target language using Google Cloud Translate.
+ * @fileOverview Translates text into a specified target language using AI.
  *
  * - translateText - A function that translates text.
  * - TranslateTextInput - The input type for the translateText function.
  * - TranslateTextOutput - The return type for the translateText function.
  */
 
-import { z } from 'genkit';
-// Import the Google Cloud Translate v2 client
-import { Translate } from '@google-cloud/translate').v2;
+import {ai} from '@/ai/genkit';
+import {z} from 'genkit';
 
-// Define input and output schemas
 const TranslateTextInputSchema = z.object({
   text: z.string().describe('The text to be translated.'),
   targetLanguage: z.string().describe('The language to translate the text into (e.g., "Hindi", "Spanish").'),
@@ -23,58 +22,68 @@ const TranslateTextOutputSchema = z.object({
 });
 export type TranslateTextOutput = z.infer<typeof TranslateTextOutputSchema>;
 
-// Initialize Google Translate instance (ensure GOOGLE_APPLICATION_CREDENTIALS env var is set)
-const translate = new Translate();
-
-function languageToCode(language: string): string {
-  // Accepts "Hindi" or "hi", "Spanish" or "es", etc.
-  const lang = language.trim().toLowerCase();
-  if (lang === 'hindi' || lang === 'hi') return 'hi';
-  if (lang === 'spanish' || lang === 'es') return 'es';
-  if (lang === 'english' || lang === 'en') return 'en';
-  // Add more if needed
-  if (lang.length === 2) return lang;
-  return 'en'; // fallback to English
-}
-
 export async function translateText(input: TranslateTextInput): Promise<TranslateTextOutput> {
   return translateTextFlow(input);
 }
 
-const translateTextFlow = async (input: TranslateTextInput): Promise<TranslateTextOutput> => {
-  try {
-    const target = languageToCode(input.targetLanguage);
-    const [translation] = await translate.translate(input.text, target);
+const prompt = ai.definePrompt({
+  name: 'translateTextPrompt',
+  input: {schema: TranslateTextInputSchema},
+  output: {schema: TranslateTextOutputSchema},
+  prompt: `Translate the following text into {{{targetLanguage}}}:
 
-    if (!translation || typeof translation !== "string" || translation.trim() === "") {
+Text: {{{text}}}
+`,
+});
+
+const translateTextFlow = ai.defineFlow(
+  {
+    name: 'translateTextFlow',
+    inputSchema: TranslateTextInputSchema,
+    outputSchema: TranslateTextOutputSchema,
+  },
+  async (input): Promise<TranslateTextOutput> => {
+    try {
+      const result = await prompt(input);
+
+      if (!result || !result.output || typeof result.output.translatedText !== 'string' || result.output.translatedText.trim() === '') {
+        // Log the problematic output structure for server-side debugging
+        console.error(
+          'TranslateTextFlow: Invalid or missing output from AI model.', 
+          { 
+            input, 
+            outputReceived: result?.output 
+          }
+        );
+        throw new Error('Translation failed: AI model did not return valid translated text.');
+      }
+      
+      return result.output;
+
+    } catch (error) {
+      let errorMessageToPropagate = 'An unknown error occurred in the translation service.';
+      let errorDetailsForLogging: any = { originalError: String(error) };
+
+      if (error instanceof Error) {
+        errorMessageToPropagate = `Translation service failed: ${error.message}`; // This message might be masked on client in prod
+        errorDetailsForLogging = {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          // Include any other relevant properties if known for specific error types
+        };
+      }
+      
+      // Log detailed error information on the server
       console.error(
-        'TranslateTextFlow: Invalid or missing output from Google Translate API.',
-        { input, outputReceived: translation }
+        `TranslateTextFlow Error: Failed to translate input text "${input.text}" to ${input.targetLanguage}. Details:`, 
+        JSON.stringify(errorDetailsForLogging, null, 2) // Stringify for better structured logging
       );
-      throw new Error('Translation failed: Google Translate did not return valid translated text.');
+      
+      // Re-throw a new error. The message here is what the client-side catch block will primarily see.
+      // Next.js might still replace this message with a generic one in production on the client-side,
+      // but the server logs will have the details.
+      throw new Error(errorMessageToPropagate);
     }
-
-    return { translatedText: translation };
-
-  } catch (error) {
-    let errorMessageToPropagate = 'An unknown error occurred in the translation service.';
-    let errorDetailsForLogging: any = { originalError: String(error) };
-
-    if (error instanceof Error) {
-      errorMessageToPropagate = `Translation service failed: ${error.message}`;
-      errorDetailsForLogging = {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      };
-    }
-
-    // Log detailed error information on the server
-    console.error(
-      `TranslateTextFlow Error: Failed to translate input text "${input.text}" to ${input.targetLanguage}. Details:`,
-      JSON.stringify(errorDetailsForLogging, null, 2)
-    );
-
-    throw new Error(errorMessageToPropagate);
   }
-};
+);
